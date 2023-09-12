@@ -51,9 +51,12 @@ interface NodeFieldTypes {
     choice: { alternatives: Node[] }
 
     optional: { expression: Node }
-    repeated: { expression: Node, min?: RepeatLimit, max: RepeatLimit, delimiter?: Node }
     zero_or_more: { expression: Node }
     one_or_more: { expression: Node }
+    optional_lazy: { expression: Node }
+    zero_or_more_lazy: { expression: Node }
+    one_or_more_lazy: { expression: Node }
+    repeated: { expression: Node, min?: RepeatLimit, max: RepeatLimit, lazy: boolean, delimiter?: Node }
 
     labeled: { label: string, pick: boolean, expression: Node }
     group: { expression: Node }
@@ -89,13 +92,16 @@ const conversionHandlers: NodeConversionHandlers = {
     choice( node, ctx ) { return node.alternatives.map( x => convert( x, ctx ) ).join( "|" ) },
 
     optional( node, ctx ) { return `${ convert( node.expression, ctx ) }?` },
-    repeated( node, ctx ) {
-        let { delimiter, min, max } = node
-        if ( delimiter ) throw new Error( "The transformation phase should have removed delimiters." )
-        return `${ convert( node.expression, ctx ) }${ getRepeatOp( min, max ) }`
-    },
     zero_or_more( node, ctx ) { return `${ convert( node.expression, ctx ) }*` },
     one_or_more( node, ctx ) { return `${ convert( node.expression, ctx ) }+` },
+    optional_lazy( node, ctx ) { return `${ convert( node.expression, ctx ) }??` },
+    zero_or_more_lazy( node, ctx ) { return `${ convert( node.expression, ctx ) }*?` },
+    one_or_more_lazy( node, ctx ) { return `${ convert( node.expression, ctx ) }+?` },
+    repeated( node, ctx ) {
+        let { delimiter, min, max, lazy } = node
+        if ( delimiter ) throw new Error( "The transformation phase should have removed delimiters." )
+        return `${ convert( node.expression, ctx ) }${ getRepeatOp( min, max, lazy ) }`
+    },
 
     labeled( node, ctx ) {
         if ( node.pick )
@@ -113,7 +119,7 @@ const conversionHandlers: NodeConversionHandlers = {
 
 const transformers: NodeTransformers = {
     repeated( node ) {
-        let { expression, delimiter, min, max } = node
+        let { expression, delimiter, min, max, lazy } = node
         if ( delimiter ) {
             min = decrementLimit( min )
             max = decrementLimit( max ) as RepeatLimit
@@ -122,14 +128,20 @@ const transformers: NodeTransformers = {
                 elements: [
                     expression,
                     {
-                        type: "repeated", min, max,
+                        type: "repeated", min, max, lazy,
                         expression: { type: "sequence", elements: [ delimiter, expression ] }
                     }
                 ]
             }
             // If we can have zero elements, the whole thing needs to be optional.
             if ( min?.value == 0 && max.value == null )
-                result = { type: "optional", expression: result }
+                result = {
+                    type: lazy ? "optional_lazy" : "optional",
+                    expression: {
+                        type: "group",
+                        expression: result
+                    }
+                }
             return result
         }
     }
@@ -216,15 +228,21 @@ function decrementLimit( limit?: RepeatLimit ) {
     return { value: value - 1 }
 }
 
-function getRepeatOp( min: RepeatLimit | undefined, max: RepeatLimit ) {
-    if ( !min )
-        return `{${ max.value }}`
-    if ( !max.value ) {
+function getRepeatOp( min: RepeatLimit | undefined, max: RepeatLimit, lazy: boolean ) {
+    let op: string
+    if ( !min ) {
+        op = `{${ max.value }}`
+    } else if ( !max.value ) {
         if ( min.value == 0 )
-            return `*`
-        return `{${ min.value },}`
+            op = `*`
+        else
+            op = `{${ min.value },}`
+    } else {
+        op = `${ min.value },${ max.value }`
     }
-    return `${ min.value },${ max.value }`
+    if ( lazy )
+        op += "?"
+    return op
 }
 
 function getPrecedence( node: Node ) {

@@ -3,7 +3,7 @@ export function escapeRegExp( str: string ) { return escapeString( str ).replace
 export function escapeString( s: any ) {
     return s
         .replace( /\\/g, '\\\\' )   // backslash
-        .replace( /"/g, '\\"' )     // closing double quote
+        // .replace( /"/g, '\\"' )     // closing double quote
         .replace( /\0/g, '\\0' )    // null
         .replace( /\x08/g, '\\b' )  // backspace
         .replace( /\t/g, '\\t' )    // horizontal tab

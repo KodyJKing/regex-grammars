@@ -36,7 +36,10 @@
   const OPS_TO_SUFFIXED_TYPES = {
     "?": "optional",
     "*": "zero_or_more",
-    "+": "one_or_more"
+    "+": "one_or_more",
+    "??": "optional_lazy",
+    "*?": "zero_or_more_lazy",
+    "+?": "one_or_more_lazy"
   };
 
   const OPS_TO_SEMANTIC_PREDICATE_TYPES = {
@@ -191,7 +194,6 @@ PrefixedExpression
 
 PrefixedOperator
   // = "$"
-  // / "&"
   = "&"
   / "!"
   / "<&"
@@ -209,22 +211,28 @@ SuffixedExpression
   / PrimaryExpression
 
 SuffixedOperator
-  = "?"
+  = "??"
+  / "*?"
+  / "+?"
+  / "?"
   / "*"
   / "+"
 
 RepeatedExpression
-  = expression:PrimaryExpression __ "|" __ boundaries:Boundaries __ delimiter:("," __ @Expression __)? "|" {
+  = expression:PrimaryExpression __ "|" __ boundaries:Boundaries __ delimiter:("," __ @Expression __)? "|" lazy: "?"? {
       let min = boundaries[0];
       let max = boundaries[1];
       if (max.type === "constant" && max.value === 0) {
         error("The maximum count of repetitions of the rule must be > 0", max.location);
       }
 
+      lazy = lazy != null
+
       return {
         type: "repeated",
         min,
         max,
+        lazy,
         expression,
         delimiter,
         location: location(),

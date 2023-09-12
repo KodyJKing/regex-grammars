@@ -12,11 +12,16 @@ const grammar = `
     // NegativeLookAhead = "Foo" !"l"
     // PositiveLookAhead = "Foo" &"l"
 
-    // NegativeLookBehind = <!"s" "tool"
-    // PositiveLookBehind = <&"s" "tool"
+    // NegativeLookBehind = <! "s" "tool"
+    // PositiveLookBehind = <& "s" "tool"
 
     // BackReference = @.\\1
     // NamedBackReference = foo: . \\k<foo>
+
+    // LazyStringLiteral = '"' LazyAny '"'
+    LazyList = "[" LazyAny|.., _ "," _ |? "]"
+    LazyAny = .+? // Will match any character, but as few as possible.
+    _ = \\s*
 
     // InputBoundary = ^"Hello World!"$
 
@@ -33,13 +38,13 @@ const grammar = `
     // YYYY = \\d|4|
 
     // UnicodeCharClass = \\p{Sc}
-    Money = <& \\p{Sc} [0-9.]+
+    // Money = <& \\p{Sc} [0-9.]+
 
     // Newline = "\\n"
     
     // OptionalAfterLiteral = "Foo"?
 
-    // DelimitedRepeat = "a"|..,","|
+    // DelimitedRepeat = "a"|..,","|?
 `
 
 function parseGrammarToRegexSource( source: string ) {
