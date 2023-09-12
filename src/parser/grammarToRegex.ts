@@ -1,7 +1,6 @@
 import { MergeIntersection } from "../utils/types"
 import { escapeRegExp } from "../utils/stringUtils"
 import { stringifyAST } from "../utils/stringifyAST"
-import { isJsxAttribute } from "typescript"
 
 type NodeTypes = { [ Key in keyof NodeFieldTypes ]: MergeIntersection<NodeFieldTypes[ Key ] & { type: Key }> }
 
@@ -17,7 +16,6 @@ type Rule = NodeTypes[ "rule" ]
 type Context = {
     rules: Record<string, Rule>
     stack: Node[]
-    stackSet: Set<Node>
 }
 
 type RepeatLimit = { value: number }
@@ -28,7 +26,6 @@ const nodePrecedences: Record<string, number> = ( function () {
         [ "literal", "sequence" ],
         [ "choice" ],
         [ "optional", "zero_or_more", "one_or_more", "repeated" ],
-        // [ "group", "labeled", "class", "any" ]
     ]
     let result = {}
     for ( let p = 0; p < groups.length; p++ )
@@ -40,23 +37,32 @@ const nodePrecedences: Record<string, number> = ( function () {
 interface NodeFieldTypes {
     grammar: { rules: NodeTypes[ "rule" ][] }
     rule: { name: string, expression: Rule }
-    literal: { value: string, ignoreCase: boolean }
     rule_ref: { name: string }
+
+    built_in_class: { regexText: string }
+    unicode_char_class: { regexText: string }
+    back_reference: { index: number }
+    named_back_reference: { name: string }
+    class: { parts: string[][], inverted: boolean, ignoreCase: boolean }
+    literal: { value: string, ignoreCase: boolean }
+    any: {}
+
     sequence: { elements: Node[] }
     choice: { alternatives: Node[] }
-    built_in_class: { text: string }
-    class: { parts: string[][], inverted: boolean, ignoreCase: boolean }
+
     optional: { expression: Node }
-    labeled: { label: string, pick: boolean, expression: Node }
     repeated: { expression: Node, min?: RepeatLimit, max: RepeatLimit, delimiter?: Node }
     zero_or_more: { expression: Node }
     one_or_more: { expression: Node }
+
+    labeled: { label: string, pick: boolean, expression: Node }
     group: { expression: Node }
-    any: {}
+
     simple_not: { expression: Node }
     simple_and: { expression: Node }
     simple_not_behind: { expression: Node }
     simple_and_behind: { expression: Node }
+    input_boundary: { regexText: string }
 }
 
 const conversionHandlers: NodeConversionHandlers = {
@@ -64,7 +70,10 @@ const conversionHandlers: NodeConversionHandlers = {
     rule() { throw new Error( "Tried to convert rule node to regex." ) },
     rule_ref() { throw new Error( "Tried to convert rule_ref node to regex." ) },
 
-    built_in_class( node ) { return node.text },
+    built_in_class( node ) { return node.regexText },
+    unicode_char_class( node ) { return `\\p{${ node.regexText }}` },
+    back_reference( node ) { return `\\${ node.index }` },
+    named_back_reference( node ) { return `\\k<${ node.name }>` },
     class( node ) {
         if ( node.ignoreCase ) throw new Error( "Case insensitive classes are not supported." )
         let parts = node.parts.map( classPartToRegex ).join( '' )
@@ -99,6 +108,7 @@ const conversionHandlers: NodeConversionHandlers = {
     simple_and( node, ctx ) { return `(?=${ convert( node.expression, ctx ) })` },
     simple_not_behind( node, ctx ) { return `(?<!${ convert( node.expression, ctx ) })` },
     simple_and_behind( node, ctx ) { return `(?<=${ convert( node.expression, ctx ) })` },
+    input_boundary( node ) { return node.regexText }
 }
 
 const transformers: NodeTransformers = {
@@ -141,26 +151,19 @@ function convert( node: Node, ctx: Context, replaceParent = false ): string {
         node = transformer( node ) ?? node
     }
 
-    if ( ctx.stackSet.has( node ) )
+    if ( ctx.stack.indexOf( node ) > -1 )
         throw new Error( "Grammar contains circular references. Cannot convert to regex." )
 
-    let needsGrouping = false
     let parent = ctx.stack[ ctx.stack.length - 1 ]
-    if ( parent ) {
-        let parentPrecedence = getPrecedence( parent )
-        let childPrecedence = getPrecedence( node )
-        if ( parentPrecedence !== undefined && childPrecedence !== undefined )
-            needsGrouping = parentPrecedence > childPrecedence
-        if ( needsGrouping )
-            console.log( `Grouping to avoid order of operations error ${ parent.type }(${ node.type })` )
-    }
+    let needsGrouping = mustGroupToPreserveOrderOfOperations( node, parent )
+    // if ( needsGrouping ) 
+    //     console.log( `Grouping to avoid order of operations error ${ parent.type }(${ node.type })` )
 
     let handler = conversionHandlers[ node.type ]
     if ( !handler )
         throw new Error( `Unhandled node type: ${ stringifyAST( node ) }` )
 
     ctx.stack.push( node )
-    ctx.stackSet.add( node )
 
     // @ts-ignore
     let result = handler( node, ctx )
@@ -168,7 +171,6 @@ function convert( node: Node, ctx: Context, replaceParent = false ): string {
         result = `(?:${ result })`
 
     ctx.stack.pop()
-    ctx.stackSet.delete( node )
 
     return result
 }
@@ -180,7 +182,7 @@ export function grammarToRegexSource( grammar: NodeTypes[ "grammar" ] ) {
 }
 
 function createContext( grammar: NodeTypes[ "grammar" ] ) {
-    let result: Context = { rules: {}, stack: [], stackSet: new Set() }
+    let result: Context = { rules: {}, stack: [] }
     let { rules } = result
     for ( let rule of grammar.rules )
         rules[ rule.name ] = rule
@@ -191,8 +193,14 @@ function parentNode( ctx: Context ) {
     return ctx.stack[ ctx.stack.length - 2 ]
 }
 
-function parentType( ctx: Context ) {
-    return parentNode( ctx )?.type
+function mustGroupToPreserveOrderOfOperations( node: Node, parent?: Node ) {
+    if ( !parent )
+        return false
+    let parentPrecedence = getPrecedence( parent )
+    let childPrecedence = getPrecedence( node )
+    if ( parentPrecedence === undefined || childPrecedence === undefined )
+        return false
+    return parentPrecedence > childPrecedence
 }
 
 function classPartToRegex( part: any ) {

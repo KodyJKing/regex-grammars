@@ -15,12 +15,25 @@ const grammar = `
     // NegativeLookBehind = <!"s" "tool"
     // PositiveLookBehind = <&"s" "tool"
 
-    // MDNRef = "[MDN Reference](https://developer.mozilla.org" ("/"  @Word)+ ")"
-    // Word = WordChar+
-    // WordChar = [a-zA-Z0-9_]
+    // BackReference = @.\\1
+    // NamedBackReference = foo: . \\k<foo>
 
-    Date = month: Digit|2| "/" day: Digit|2| "/" year: Digit|4|
-    Digit = \\d
+    // InputBoundary = ^"Hello World!"$
+
+    // MDNRef = "[MDN Reference](https://developer.mozilla.org" ("/"  \\w+)+ ")"
+
+    // Composition = name: \\w+ \\s birthday: DateLabeled \\s country: \\w+
+    // DateLabeled = month: MM "/" day: DD "/" year: YYYY
+
+    // DateList = Date| .., \\s* "," \\s* |
+
+    // Date = MM "/" DD "/" YYYY
+    // DD = [0-2][0-9]
+    // MM = [0-1][0-9]
+    // YYYY = \\d|4|
+
+    // UnicodeCharClass = \\p{Sc}
+    Money = <& \\p{Sc} [0-9.]+
 
     // Newline = "\\n"
     
@@ -48,12 +61,10 @@ test( "look-ahead", t => {
 } )
 
 test( "mdn-ref", t => {
-    let regexSource = parseGrammarToRegexSource( `
-        MDNRef = "[MDN Reference](https://developer.mozilla.org" ("/" Word)+ ")"
-        Word = WordChar+
-        WordChar = [a-zA-Z0-9_]
-    ` )
-    t.deepEqual( regexSource, /\[MDN Reference\]\(https:\/\/developer\.mozilla\.org(?:\/[a-zA-Z0-9_]+)+\)/.source )
+    let regexSource = parseGrammarToRegexSource(
+        `start = "[MDN Reference](https://developer.mozilla.org" ("/" \\w+)+ ")" `
+    )
+    t.deepEqual( regexSource, /\[MDN Reference\]\(https:\/\/developer\.mozilla\.org(?:\/\w+)+\)/.source )
 } )
 
 test( "delimit", t => {

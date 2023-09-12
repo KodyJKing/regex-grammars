@@ -26,7 +26,7 @@
 
 {{
   const OPS_TO_PREFIXED_TYPES = {
-    "$": "text",
+    // "$": "text",
     "&": "simple_and",
     "!": "simple_not",
     "<&": "simple_and_behind",
@@ -190,8 +190,9 @@ PrefixedExpression
   / SuffixedExpression
 
 PrefixedOperator
-  = "$"
-  / "&"
+  // = "$"
+  // / "&"
+  = "&"
   / "!"
   / "<&"
   / "<!"
@@ -254,8 +255,12 @@ Boundary
 PrimaryExpression
   = LiteralMatcher
   / BuiltInClassMatcher
+  / UnicodeCharacterClassMatcher
+  / BackReferenceMatcher
+  / NamedBackReferenceMatcher
   / CharacterClassMatcher
   / AnyMatcher
+  / InputBoundaryMatcher
   / RuleReferenceExpression
   / SemanticPredicateExpression
   / "(" __ expression:Expression __ ")" {
@@ -389,7 +394,7 @@ BuiltInClassMatcher "built in class"
   = BuiltInClass {
     return { 
       type: "built_in_class",
-      text: text(),
+      regexText: text(),
       location: location()
     };
   }
@@ -405,6 +410,27 @@ BuiltInClass
   / "\\S"
   / "\\b"
   / "\\B"
+
+UnicodeCharacterClassMatcher "unicode character class"
+  = "\\p{" regexText: $[a-zA-Z_=]* "}" { return { type: "unicode_char_class", regexText, location: location() }; }
+
+BackReferenceMatcher "back reference"
+  = "\\" index: Integer {
+    return {
+      type: "back_reference",
+      index,
+      location: location()
+    };
+  }
+
+NamedBackReferenceMatcher "named back reference"
+  = "\\k<" _ name: $IdentifierName _ ">" {
+    return {
+      type: "named_back_reference",
+      name,
+      location: location()
+    };
+  }
 
 CharacterClassMatcher "character class"
   = "["
@@ -489,6 +515,9 @@ HexDigit
 
 AnyMatcher
   = "." { return { type: "any", location: location() }; }
+
+InputBoundaryMatcher
+  = ("^" / "$") { return { type: "input_boundary", regexText: text(), location: location() }; }
 
 CodeBlock "code block"
   = "{" @BareCodeBlock "}"
