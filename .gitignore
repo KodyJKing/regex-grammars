@@ -1,0 +1,6 @@
+/.parcel-cache
+/dist
+/node_modules
+/lib
+/tmp
+src/parser/parser.js

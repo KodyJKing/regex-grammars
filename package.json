@@ -1,0 +1,21 @@
+{
+  "name": "regex-grammars",
+  "version": "1.0.0",
+  "main": "main.js",
+  "license": "None",
+  "scripts": {
+    "watch:compile": "tsc --watch",
+    "watch:ava": "ava --watch",
+    "watch:parser": "nodemon -w ./src/parser/parser.pegjs --exec yarn parser",
+    "watch": "set VSCODE_INSPECTOR_OPTIONS= && run-p watch:*",
+    "parser": "peggy -o ./src/parser/parser.js ./src/parser/parser.pegjs"
+  },
+  "dependencies": {
+    "typescript": "^5.2.2",
+    "peggy": "^3.0.2"
+  },
+  "devDependencies": {
+    "ava": "^5.2.0",
+    "npm-run-all": "^4.1.5"
+  }
+}
