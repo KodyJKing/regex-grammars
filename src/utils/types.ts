@@ -1,0 +1,1 @@
+export type MergeIntersection<T> = T extends {} ? { [ K in keyof T ]: T[ K ] } : T

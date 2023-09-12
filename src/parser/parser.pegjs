@@ -28,7 +28,9 @@
   const OPS_TO_PREFIXED_TYPES = {
     "$": "text",
     "&": "simple_and",
-    "!": "simple_not"
+    "!": "simple_not",
+    "<&": "simple_and_behind",
+    "<!": "simple_not_behind",
   };
 
   const OPS_TO_SUFFIXED_TYPES = {
@@ -191,6 +193,8 @@ PrefixedOperator
   = "$"
   / "&"
   / "!"
+  / "<&"
+  / "<!"
 
 SuffixedExpression
   = expression:PrimaryExpression __ operator:SuffixedOperator {
@@ -249,6 +253,7 @@ Boundary
 
 PrimaryExpression
   = LiteralMatcher
+  / BuiltInClassMatcher
   / CharacterClassMatcher
   / AnyMatcher
   / RuleReferenceExpression
@@ -327,7 +332,7 @@ IdentifierName "identifier"
 IdentifierStart
   = UnicodeLetter
   / "_"
-  / "\\" @UnicodeEscapeSequence
+  // / "\\" @UnicodeEscapeSequence
 
 IdentifierPart
   = IdentifierStart
@@ -379,6 +384,27 @@ SingleStringCharacter
   = $(!("'" / "\\" / LineTerminator) SourceCharacter)
   / "\\" @EscapeSequence
   / LineContinuation
+
+BuiltInClassMatcher "built in class"
+  = BuiltInClass {
+    return { 
+      type: "built_in_class",
+      text: text(),
+      location: location()
+    };
+  }
+
+BuiltInClass
+  = "\\s"
+  / "\\S"
+  / "\\d"
+  / "\\D"
+  / "\\w"
+  / "\\W"
+  / "\\S"
+  / "\\S"
+  / "\\b"
+  / "\\B"
 
 CharacterClassMatcher "character class"
   = "["
