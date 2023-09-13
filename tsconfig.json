@@ -1,19 +1,24 @@
 {
     "compilerOptions": {
         // "baseUrl": "./src",
-        "rootDir": "src",
         "outDir": "lib",
         "target": "ESNext",
         "sourceMap": true,
         "allowJs": true,
-        "module": "CommonJS",
-        "moduleResolution": "node",
+        "module": "NodeNext",
+        "moduleResolution": "NodeNext",
         "allowSyntheticDefaultImports": true,
         "strictNullChecks": true,
         "jsx": "react",
+        "declaration": true,
+        "rootDirs": [
+            "src",
+            "web"
+        ]
     },
     "include": [
-        "src"
+        "src",
+        "web"
     ],
     "exclude": [
         "node_modules",

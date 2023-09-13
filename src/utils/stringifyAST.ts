@@ -1,4 +1,4 @@
-import { prettyStringify } from "./prettyStringify"
+import { prettyStringify } from "./prettyStringify.js"
 
 export function stringifyAST( ast: any ) {
     return prettyStringify(
@@ -7,7 +7,7 @@ export function stringifyAST( ast: any ) {
             indentString: "    ",
             maxLineWidth: 80,
             replacer: stripASTValue,
-            colorize() { return { type: "green", name: "yellow" } }
+            colorize() { return { type: "green", name: "yellow", value: "cyan" } }
         }
     )
 }

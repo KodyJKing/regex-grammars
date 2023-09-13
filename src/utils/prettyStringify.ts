@@ -1,4 +1,4 @@
-import { Color, colors, resetColor } from "./consoleColors"
+import { Color, colors, resetColor } from "./consoleColors.js"
 
 type ColorMap = Record<string, Color>
 
@@ -19,12 +19,13 @@ export function prettyStringify(
     } = options
 
     let builder = new IndentStringBuilder( indentString )
+    visit( obj )
+    return builder.content
 
     function visit( obj ) {
         if ( replacer )
             obj = replacer( obj )
 
-        // let json = JSON.stringify( obj )
         let inline = prettyStringifyInline( obj, { replacer, colorize } )
         if ( isPrimative( obj ) || inline.length <= maxLineWidth ) {
             builder.write( inline )
@@ -51,10 +52,6 @@ export function prettyStringify(
             } )
         }
     }
-
-    visit( obj )
-
-    return builder.content
 }
 
 export function prettyStringifyInline(
@@ -69,56 +66,41 @@ export function prettyStringifyInline(
         colorize
     } = options
 
-    let result = ""
+    return stringify( obj )
 
-    function visit( obj ) {
+    function stringify( obj ) {
         if ( replacer )
             obj = replacer( obj )
 
-        if ( isPrimative( obj ) ) {
-            result += JSON.stringify( obj )
-        } else if ( obj instanceof Array ) {
-            if ( obj.length == 0 ) {
-                result += "[]"
-            } else {
-                result += "["
-                for ( let elem of obj ) {
-                    result += " "
-                    visit( elem )
-                }
-                result += " ]"
-            }
-        } else {
-            let entries = Object.entries( obj )
-            if ( entries.length == 0 ) {
-                result += "{}"
-            } else {
-                const colorMap: ColorMap = colorize ? colorize( obj ) : {}
-                result += "{"
-                for ( let i = 0; i < entries.length; i++ ) {
-                    let [ key, value ] = entries[ i ]
-                    result += " " + key + ": "
-                    let colorName = colorMap[ key ]
-                    if ( colorName ) result += colors[ colorName ]
-                    visit( value )
-                    if ( colorName ) result += resetColor
-                    if ( i + 1 < entries.length )
-                        result += ","
-                }
-                result += " }"
-            }
+        if ( isPrimative( obj ) )
+            return JSON.stringify( obj )
+
+        if ( obj instanceof Array ) {
+            if ( obj.length == 0 )
+                return "[]"
+            return `[ ${ obj.map( stringify ).join( ", " ) } ]`
         }
+
+        let entries = Object.entries( obj )
+        if ( entries.length == 0 )
+            return "{}"
+        const colorMap: ColorMap = colorize ? colorize( obj ) : {}
+        let entriesString = entries.map(
+            ( [ key, value ] ) => {
+                let valueString = stringify( value )
+                let colorName = colorMap[ key ]
+                if ( colorName )
+                    valueString = `${ colors[ colorName ] }${ valueString }${ resetColor }`
+                return `${ key }: ${ valueString }`
+            }
+        ).join( ", " )
+        return `{ ${ entriesString } }`
     }
-
-    visit( obj )
-
-    return result
-
 }
 
 function isPrimative( value ) {
-    if ( value instanceof Object && value !== null )
-        return false
+    if ( value instanceof Object )
+        return value === null
     return true
 }
 
@@ -136,9 +118,9 @@ class IndentStringBuilder {
             this.content += this.indentString
     }
 
-    indent( content: () => void ) {
+    indent( then: () => void ) {
         this.indentLevel++
-        content()
+        then()
         this.indentLevel--
     }
 

@@ -1,6 +1,6 @@
-import { MergeIntersection } from "../utils/types"
-import { escapeRegExp } from "../utils/stringUtils"
-import { stringifyAST } from "../utils/stringifyAST"
+import { MergeIntersection } from "./utils/types.js"
+import { escapeRegExp } from "./utils/stringUtils.js"
+import { stringifyAST } from "./utils/stringifyAST.js"
 
 type NodeTypes = { [ Key in keyof NodeFieldTypes ]: MergeIntersection<NodeFieldTypes[ Key ] & { type: Key }> }
 
@@ -13,26 +13,9 @@ type Node = NodeTypes[ keyof NodeTypes ]
 export type Grammar = NodeTypes[ "grammar" ]
 type Rule = NodeTypes[ "rule" ]
 
-type Context = {
-    rules: Record<string, Rule>
-    stack: Node[]
-}
+type Context = { rules: Record<string, Rule>, stack: Node[] }
 
 type RepeatLimit = { value: number }
-
-const nodePrecedences: Record<string, number> = ( function () {
-    /** Nodes in increasing order of binding tightness. */
-    const groups: ( keyof NodeTypes )[][] = [
-        [ "literal", "sequence" ],
-        [ "choice" ],
-        [ "optional", "zero_or_more", "one_or_more", "repeated" ],
-    ]
-    let result = {}
-    for ( let p = 0; p < groups.length; p++ )
-        for ( let type of groups[ p ] )
-            result[ type ] = p
-    return result
-} )()
 
 interface NodeFieldTypes {
     grammar: { rules: NodeTypes[ "rule" ][] }
@@ -110,11 +93,17 @@ const conversionHandlers: NodeConversionHandlers = {
     },
     group( node, ctx ) { return `(?:${ convert( node.expression, ctx ) })` },
 
-    simple_not( node, ctx ) { return `(?!${ convert( node.expression, ctx ) })` },
-    simple_and( node, ctx ) { return `(?=${ convert( node.expression, ctx ) })` },
-    simple_not_behind( node, ctx ) { return `(?<!${ convert( node.expression, ctx ) })` },
-    simple_and_behind( node, ctx ) { return `(?<=${ convert( node.expression, ctx ) })` },
+    simple_not: convertUnary( text => `(?!${ text })` ),
+    simple_and: convertUnary( text => `(?=${ text })` ),
+    simple_not_behind: convertUnary( text => `(?<!${ text })` ),
+    simple_and_behind: convertUnary( text => `(?<=${ text })` ),
     input_boundary( node ) { return node.regexText }
+}
+
+function convertUnary( wrapText: ( text: string ) => string ) {
+    return function ( node: Node & { expression: Node }, ctx: Context ) {
+        return wrapText( convert( node.expression, ctx ) )
+    }
 }
 
 const transformers: NodeTransformers = {
@@ -133,15 +122,8 @@ const transformers: NodeTransformers = {
                     }
                 ]
             }
-            // If we can have zero elements, the whole thing needs to be optional.
-            if ( min?.value == 0 && max.value == null )
-                result = {
-                    type: lazy ? "optional_lazy" : "optional",
-                    expression: {
-                        type: "group",
-                        expression: result
-                    }
-                }
+            if ( min?.value == 0 )
+                result = { type: lazy ? "optional_lazy" : "optional", expression: result }
             return result
         }
     }
@@ -151,9 +133,13 @@ function convert( node: Node, ctx: Context, replaceParent = false ): string {
     if ( !node )
         throw new Error( `Tried to convert undefined node to regex.` )
 
-    // These types should be transparent. Convert their children instead.
-    if ( node.type === "rule_ref" )
-        node = ctx.rules[ node.name ]
+    if ( node.type === "rule_ref" ) {
+        let name = node.name
+        node = ctx.rules[ name ]
+        if ( !node )
+            throw new Error( `Referenced rule, "${ name }", does not exist.` )
+    }
+
     if ( node.type === "rule" )
         node = node.expression
 
@@ -166,11 +152,6 @@ function convert( node: Node, ctx: Context, replaceParent = false ): string {
     if ( ctx.stack.indexOf( node ) > -1 )
         throw new Error( "Grammar contains circular references. Cannot convert to regex." )
 
-    let parent = ctx.stack[ ctx.stack.length - 1 ]
-    let needsGrouping = mustGroupToPreserveOrderOfOperations( node, parent )
-    // if ( needsGrouping ) 
-    //     console.log( `Grouping to avoid order of operations error ${ parent.type }(${ node.type })` )
-
     let handler = conversionHandlers[ node.type ]
     if ( !handler )
         throw new Error( `Unhandled node type: ${ stringifyAST( node ) }` )
@@ -179,8 +160,12 @@ function convert( node: Node, ctx: Context, replaceParent = false ): string {
 
     // @ts-ignore
     let result = handler( node, ctx )
-    if ( needsGrouping )
+
+    let parent = parentNode( ctx )
+    if ( mustGroupToPreserveOrderOfOperations( node, parent ) ) {
         result = `(?:${ result })`
+        console.log( `Grouping to avoid order of operations error ${ parent.type }(${ node.type })` )
+    }
 
     ctx.stack.pop()
 
@@ -203,16 +188,6 @@ function createContext( grammar: NodeTypes[ "grammar" ] ) {
 
 function parentNode( ctx: Context ) {
     return ctx.stack[ ctx.stack.length - 2 ]
-}
-
-function mustGroupToPreserveOrderOfOperations( node: Node, parent?: Node ) {
-    if ( !parent )
-        return false
-    let parentPrecedence = getPrecedence( parent )
-    let childPrecedence = getPrecedence( node )
-    if ( parentPrecedence === undefined || childPrecedence === undefined )
-        return false
-    return parentPrecedence > childPrecedence
 }
 
 function classPartToRegex( part: any ) {
@@ -238,13 +213,60 @@ function getRepeatOp( min: RepeatLimit | undefined, max: RepeatLimit, lazy: bool
         else
             op = `{${ min.value },}`
     } else {
-        op = `${ min.value },${ max.value }`
+        op = `{${ min.value },${ max.value }}`
     }
     if ( lazy )
         op += "?"
     return op
 }
 
+/**
+ * A map of operation precedences, used to parenthesize when necessary. Any undefined node type will be ignored.
+ */
+const nodePrecedences: Record<string, number> = ( function () {
+
+    /** Nodes in increasing order of binding tightness. */
+    const groups: ( keyof NodeTypes )[][] = [
+
+        /*
+         * In regex, a literal is not atomic, it's a sequence of char literals,
+         * so it can be broken by order-of-operations. For example: /foo?/ parses as /fo(o?)/
+         */
+        [ "sequence", "literal" ],
+
+        [ "choice" ],
+        [ "zero_or_more", "one_or_more", "repeated", "optional_lazy", "zero_or_more_lazy", "one_or_more_lazy", "repeated" ],
+
+        /*
+         * Optional expressions need higher precedence than other quantifiers
+         * to avoid ambiguities like: (.+)? vs .+?
+         */
+        [ "optional" ],
+
+    ]
+
+    let result = {}
+    for ( let p = 0; p < groups.length; p++ )
+        for ( let type of groups[ p ] )
+            result[ type ] = p
+    return result
+
+} )()
+
 function getPrecedence( node: Node ) {
+    // If a literal has one or fewer characters, it's atomic and can't be broken by order-of-operations.
+    if ( node.type == "literal" && node.value.length < 2 )
+        return undefined
+
     return nodePrecedences[ node.type ]
+}
+
+function mustGroupToPreserveOrderOfOperations( node: Node, parent?: Node ) {
+    if ( !parent )
+        return false
+    let parentPrecedence = getPrecedence( parent )
+    let childPrecedence = getPrecedence( node )
+    if ( parentPrecedence === undefined || childPrecedence === undefined )
+        return false
+    return parentPrecedence > childPrecedence
 }
