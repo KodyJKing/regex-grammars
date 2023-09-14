@@ -22,13 +22,13 @@ const grammar = `
 
     // InputBoundary = ^"Hello World!"$
 
-    // MDNRef = "[MDN Reference](https://developer.mozilla.org" ("/"  \\w+)+ ")"
+    MDNRef = "[MDN Reference](https://developer.mozilla.org" ("/"  \\w+)+ ")"
 
-    Composition = name: \\w+ \\s birthday: DateLabeled \\s country: \\w+
-    DateLabeled = month: MM "/" day: DD "/" year: YYYY
-    DD = [0-2][0-9]
-    MM = [0-1][0-9]
-    YYYY = \\d|4|
+    // Composition = name: \\w+ \\s birthday: DateLabeled \\s country: \\w+
+    // DateLabeled = month: MM "/" day: DD "/" year: YYYY
+    // DD = [0-2][0-9]
+    // MM = [0-1][0-9]
+    // YYYY = \\d|4|
 
     // DateList = Date| .., \\s* "," \\s* |
 

@@ -5,7 +5,9 @@ import { stringifyAST } from "./utils/stringifyAST.js"
 type LocationPart = { offset: number, column: number, line: number }
 type Location = { start: LocationPart, end: LocationPart }
 
-type NodeTypes = { [ Key in keyof NodeFieldTypes ]: MergeIntersection<NodeFieldTypes[ Key ] & { type: Key, location?: Location }> }
+type NodeBase = { location?: Location, codeLocation?: Location }
+
+type NodeTypes = { [ Key in keyof NodeFieldTypes ]: MergeIntersection<NodeFieldTypes[ Key ] & NodeBase & { type: Key }> }
 
 type NodeConversionHandlers = { [ Key in keyof NodeTypes ]: ( node: NodeTypes[ Key ], ctx: Context ) => string }
 
@@ -21,7 +23,11 @@ type Context = { rules: Record<string, Rule>, stack: Node[] }
 type RepeatLimit = { value: number }
 
 interface NodeFieldTypes {
-    grammar: { rules: Rule[] }
+    grammar: { rules: Rule[], initializer?: Node, topLevelInitializer?: Node }
+    action: {}
+    semantic_and: {}
+    semantic_not: {}
+
     rule: { name: string, expression: Rule }
     rule_ref: { name: string }
 
@@ -56,6 +62,10 @@ interface NodeFieldTypes {
 
 const conversionHandlers: NodeConversionHandlers = {
     grammar( node ) { throw createError( node, "Tried to convert grammar node to regex." ) },
+    action( node ) { throw createError( node, "JavaScript actions are not supported." ) },
+    semantic_and( node ) { throw createError( node, "JavaScript assertions are not supported." ) },
+    semantic_not( node ) { throw createError( node, "JavaScript assertions are not supported." ) },
+
     rule( node, ctx ) { return convert( node.expression, ctx ) },
     rule_ref( node, ctx ) {
         let referencedRule = ctx.rules[ node.name ]
@@ -149,8 +159,12 @@ function convert( node: Node, ctx: Context ): string {
     if ( !handler )
         throw createError( node, `Unhandled node type: ${ node.type }` )
 
-    if ( ctx.stack.indexOf( node ) > -1 )
-        throw createError( node, "Grammar contains circular references. Cannot convert to regex." )
+    if ( ctx.stack.indexOf( node ) > -1 ) {
+        let ruleCycle = rulesOnStack( ctx )
+        if ( node.type === "rule" )
+            ruleCycle = ruleCycle.concat( [ node.name ] )
+        throw createError( node, `Grammar contains circular reference: ${ ruleCycle.join( " -> " ) }` )
+    }
 
     ctx.stack.push( node )
 
@@ -172,11 +186,14 @@ function createError( node: Node | undefined, message: string ) {
         return new Error( message )
     return Object.assign(
         new Error( message ),
-        { location: node.location }
+        { location: node.location ?? node.codeLocation }
     )
 }
 
 export function grammarToRegexSource( grammar: Grammar ) {
+    if ( grammar.initializer ) throw createError( grammar.initializer, "JavaScript initializers are not supported." )
+    if ( grammar.topLevelInitializer ) throw createError( grammar.topLevelInitializer, "JavaScript initializers are not supported." )
+
     let context = createContext( grammar )
     let startRule: Node = grammar.rules[ 0 ]
     return convert( startRule, context )
@@ -200,6 +217,10 @@ function parentExpressions( ctx: Context ): Node | undefined {
         if ( parent.type !== "rule" && parent.type !== "rule_ref" )
             return parent
     }
+}
+
+function rulesOnStack( ctx: Context ) {
+    return ctx.stack.filter( node => node.type === "rule" ).map( node => ( node as Rule ).name )
 }
 
 function classPartToRegex( part: any ) {
