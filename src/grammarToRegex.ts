@@ -74,12 +74,12 @@ const conversionHandlers: NodeConversionHandlers = {
     sequence( node, ctx ) { return node.elements.map( x => convert( x, ctx ) ).join( "" ) },
     choice( node, ctx ) { return node.alternatives.map( x => convert( x, ctx ) ).join( "|" ) },
 
-    optional( node, ctx ) { return `${ convert( node.expression, ctx ) }?` },
-    zero_or_more( node, ctx ) { return `${ convert( node.expression, ctx ) }*` },
-    one_or_more( node, ctx ) { return `${ convert( node.expression, ctx ) }+` },
-    optional_lazy( node, ctx ) { return `${ convert( node.expression, ctx ) }??` },
-    zero_or_more_lazy( node, ctx ) { return `${ convert( node.expression, ctx ) }*?` },
-    one_or_more_lazy( node, ctx ) { return `${ convert( node.expression, ctx ) }+?` },
+    optional: convertUnary( text => `${ text }?` ),
+    zero_or_more: convertUnary( text => `${ text }*` ),
+    one_or_more: convertUnary( text => `${ text }+` ),
+    optional_lazy: convertUnary( text => `${ text }??` ),
+    zero_or_more_lazy: convertUnary( text => `${ text }*?` ),
+    one_or_more_lazy: convertUnary( text => `${ text }+?` ),
     repeated( node, ctx ) {
         let { delimiter, min, max, lazy } = node
         if ( delimiter ) throw new Error( "The transformation phase should have removed delimiters." )

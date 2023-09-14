@@ -1,10 +1,7 @@
 import test from "ava"
-import * as parser from "../parser/parser.js"
-import { prettyStringify } from "../utils/prettyStringify.js"
 import { stringifyAST } from "../utils/stringifyAST.js"
-import { Grammar, grammarToRegexSource } from "../grammarToRegex.js"
-
-const parse = parser.parse as ( source: string ) => Grammar
+import { grammarToRegexSource } from "../grammarToRegex.js"
+import { parseGrammar, parseGrammarToRegexSource } from "../index.js"
 
 const DIVIDER = "\n\n"
 
@@ -48,13 +45,8 @@ const grammar = `
     // DelimitedRepeat = ("a"|4|)?
 `
 
-function parseGrammarToRegexSource( source: string ) {
-    return grammarToRegexSource( parse( source ) )
-}
-
 test( "main", t => {
-    // console.log( DIVIDER, grammar, DIVIDER )
-    let ast = parse( grammar )
+    let ast = parseGrammar( grammar )
     console.log( DIVIDER, stringifyAST( ast ), DIVIDER )
     let regex = grammarToRegexSource( ast )
     console.log( DIVIDER, regex, DIVIDER )

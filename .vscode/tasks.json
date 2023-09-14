@@ -1,0 +1,33 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "shell",
+			"group": "build",
+			"command": "Start-Process powershell.exe -ArgumentList 'yarn watch'",
+			"label": "yarn watch [External Terminal]",
+			"presentation": {
+				"echo": true,
+				"reveal": "never",
+				"focus": false,
+				"panel": "shared",
+				"showReuseMessage": true,
+				"clear": true
+			}
+		},
+		{
+			"type": "shell",
+			"group": "build",
+			"command": "Start-Process powershell.exe -ArgumentList 'yarn web'",
+			"label": "yarn web [External Terminal]",
+			"presentation": {
+				"echo": true,
+				"reveal": "never",
+				"focus": false,
+				"panel": "shared",
+				"showReuseMessage": true,
+				"clear": true
+			}
+		}
+	]
+}

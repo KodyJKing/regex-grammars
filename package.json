@@ -12,11 +12,18 @@
     "watch:ava": "ava --watch",
     "watch:parser": "nodemon -w ./src/parser/parser.pegjs --exec yarn parser",
     "watch": "set VSCODE_INSPECTOR_OPTIONS= && run-p watch:*",
+    "web": "vite --port 1234",
     "parser": "peggy --format es -o ./src/parser/parser.js ./src/parser/parser.pegjs"
   },
   "dependencies": {
+    "@types/react": "^18.2.21",
+    "@types/react-dom": "^18.2.7",
+    "monaco-editor": "^0.43.0",
+    "peggy": "^3.0.2",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
     "typescript": "^5.2.2",
-    "peggy": "^3.0.2"
+    "vite": "^4.4.9"
   },
   "devDependencies": {
     "ava": "^5.2.0",

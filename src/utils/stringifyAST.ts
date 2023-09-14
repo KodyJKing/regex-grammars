@@ -5,9 +5,9 @@ export function stringifyAST( ast: any ) {
         ast,
         {
             indentString: "    ",
-            maxLineWidth: 80,
+            maxLineWidth: 150,
             replacer: stripASTValue,
-            colorize() { return { type: "green", name: "yellow", value: "cyan" } }
+            colorize() { return { type: "green", name: "yellow", label: "red", value: "cyan" } }
         }
     )
 }
