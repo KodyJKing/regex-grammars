@@ -2,7 +2,10 @@ import { MergeIntersection } from "./utils/types.js"
 import { escapeRegExp } from "./utils/stringUtils.js"
 import { stringifyAST } from "./utils/stringifyAST.js"
 
-type NodeTypes = { [ Key in keyof NodeFieldTypes ]: MergeIntersection<NodeFieldTypes[ Key ] & { type: Key }> }
+type LocationPart = { offset: number, column: number, line: number }
+type Location = { start: LocationPart, end: LocationPart }
+
+type NodeTypes = { [ Key in keyof NodeFieldTypes ]: MergeIntersection<NodeFieldTypes[ Key ] & { type: Key, location?: Location }> }
 
 type NodeConversionHandlers = { [ Key in keyof NodeTypes ]: ( node: NodeTypes[ Key ], ctx: Context ) => string }
 
@@ -18,7 +21,7 @@ type Context = { rules: Record<string, Rule>, stack: Node[] }
 type RepeatLimit = { value: number }
 
 interface NodeFieldTypes {
-    grammar: { rules: NodeTypes[ "rule" ][] }
+    grammar: { rules: Rule[] }
     rule: { name: string, expression: Rule }
     rule_ref: { name: string }
 
@@ -52,9 +55,11 @@ interface NodeFieldTypes {
 }
 
 const conversionHandlers: NodeConversionHandlers = {
-    grammar() { throw new Error( "Tried to convert grammar node to regex." ) },
-    rule() { throw new Error( "Tried to convert rule node to regex." ) },
-    rule_ref() { throw new Error( "Tried to convert rule_ref node to regex." ) },
+    grammar( node ) { throw createError( node, "Tried to convert grammar node to regex." ) },
+    // rule( node ) { throw createError( node, "Tried to convert rule node to regex." ) },
+    // rule_ref( node ) { throw createError( node, "Tried to convert rule_ref node to regex." ) },
+    rule( node, ctx ) { return convert( node.expression, ctx ) },
+    rule_ref( node, ctx ) { return convert( ctx.rules[ node.name ], ctx ) },
 
     built_in_class( node ) { return node.regexText },
     unicode_char_class( node ) { return `\\p{${ node.regexText }}` },
@@ -129,42 +134,40 @@ const transformers: NodeTransformers = {
     }
 }
 
-function convert( node: Node, ctx: Context, replaceParent = false ): string {
+function convert( node: Node, ctx: Context ): string {
     if ( !node )
-        throw new Error( `Tried to convert undefined node to regex.` )
+        throw createError( ctx.stack[ ctx.stack.length - 1 ], `Tried to convert undefined node to regex.` )
 
-    if ( node.type === "rule_ref" ) {
-        let name = node.name
-        node = ctx.rules[ name ]
-        if ( !node )
-            throw new Error( `Referenced rule, "${ name }", does not exist.` )
-    }
-
-    if ( node.type === "rule" )
-        node = node.expression
+    // if ( node.type === "rule_ref" ) {
+    //     const { name } = node
+    //     const referencingNode = node
+    //     node = ctx.rules[ name ]
+    //     if ( !node )
+    //         throw createError( referencingNode, `Referenced rule, "${ name }", does not exist.` )
+    // }
+    // if ( node.type === "rule" )
+    //     node = node.expression
 
     let transformer = transformers[ node.type ]
-    if ( transformer ) {
-        // @ts-ignore
-        node = transformer( node ) ?? node
-    }
-
-    if ( ctx.stack.indexOf( node ) > -1 )
-        throw new Error( "Grammar contains circular references. Cannot convert to regex." )
+    // @ts-ignore
+    if ( transformer ) node = transformer( node ) ?? node
 
     let handler = conversionHandlers[ node.type ]
     if ( !handler )
-        throw new Error( `Unhandled node type: ${ stringifyAST( node ) }` )
+        throw createError( node, `Unhandled node type: ${ node.type }` )
+
+    if ( ctx.stack.indexOf( node ) > -1 )
+        throw createError( node, "Grammar contains circular references. Cannot convert to regex." )
 
     ctx.stack.push( node )
 
     // @ts-ignore
     let result = handler( node, ctx )
 
-    let parent = parentNode( ctx )
+    let parent = parentExpressions( ctx )
     if ( mustGroupToPreserveOrderOfOperations( node, parent ) ) {
         result = `(?:${ result })`
-        console.log( `Grouping to avoid order of operations error ${ parent.type }(${ node.type })` )
+        // console.log( `Grouping to avoid order of operations error ${ parent?.type }(${ node.type })` )
     }
 
     ctx.stack.pop()
@@ -172,22 +175,39 @@ function convert( node: Node, ctx: Context, replaceParent = false ): string {
     return result
 }
 
-export function grammarToRegexSource( grammar: NodeTypes[ "grammar" ] ) {
+function createError( node: Node | undefined, message: string ) {
+    if ( !node )
+        return new Error( message )
+    return Object.assign(
+        new Error( message ),
+        { location: node.location }
+    )
+}
+
+export function grammarToRegexSource( grammar: Grammar ) {
     let context = createContext( grammar )
-    let startRule = grammar.rules[ 0 ]
+    let startRule: Node = { type: "rule_ref", name: grammar.rules[ 0 ].name }
     return convert( startRule, context )
 }
 
-function createContext( grammar: NodeTypes[ "grammar" ] ) {
+function createContext( grammar: Grammar ) {
     let result: Context = { rules: {}, stack: [] }
     let { rules } = result
-    for ( let rule of grammar.rules )
+    for ( let rule of grammar.rules ) {
+        if ( rules[ rule.name ] )
+            throw createError( rule, `Redeclaration of rule: ${ rule.name }` )
         rules[ rule.name ] = rule
+    }
     return result
 }
 
-function parentNode( ctx: Context ) {
-    return ctx.stack[ ctx.stack.length - 2 ]
+function parentExpressions( ctx: Context ): Node | undefined {
+    for ( let i = 2; ; i-- ) {
+        let parent = ctx.stack[ ctx.stack.length - i ]
+        if ( !parent ) return
+        if ( parent.type !== "rule" && parent.type !== "rule_ref" )
+            return parent
+    }
 }
 
 function classPartToRegex( part: any ) {
@@ -228,13 +248,14 @@ const nodePrecedences: Record<string, number> = ( function () {
     /** Nodes in increasing order of binding tightness. */
     const groups: ( keyof NodeTypes )[][] = [
 
+        [ "choice" ],
+
         /*
          * In regex, a literal is not atomic, it's a sequence of char literals,
          * so it can be broken by order-of-operations. For example: /foo?/ parses as /fo(o?)/
          */
         [ "sequence", "literal" ],
 
-        [ "choice" ],
         [ "zero_or_more", "one_or_more", "repeated", "optional_lazy", "zero_or_more_lazy", "one_or_more_lazy", "repeated" ],
 
         /*

@@ -1,15 +1,16 @@
 import React, { useRef, useState, useEffect } from 'react'
 import * as monaco from "monaco-editor"
-import styles from './Editor.module.css'
+// import styles from './Editor.module.css'
 import { PegexLanguageName, registerPegexLanguage } from '../language/pegex.js'
 import { undent } from '../../src/utils/stringUtils.js'
-import { parseGrammar } from '../../src/index.js'
+import { parseGrammar, parseGrammarToRegexSource } from '../../src/index.js'
 import debounce from '../utils/debounce.js'
 
 type IStandaloneCodeEditor = monaco.editor.IStandaloneCodeEditor
 
 export function Editor() {
     const [ editor, setEditor ] = useState<IStandaloneCodeEditor | null>( null )
+    const [ output, setOutput ] = useState<string>()
     const monacoEl = useRef( null )
 
     useEffect( () => {
@@ -28,7 +29,8 @@ export function Editor() {
                     automaticLayout: true
                 } )
 
-                _editor.onDidChangeModelContent( () => checkErrors( _editor ) )
+                _editor.onDidChangeModelContent( () => tryCompile( _editor, setOutput ) )
+                tryCompile( _editor, setOutput )
 
                 return _editor
             } )
@@ -37,27 +39,35 @@ export function Editor() {
         return () => editor?.dispose()
     }, [ monacoEl.current ] )
 
-    return <div className={styles.Editor} ref={monacoEl}></div>
+    return <div className="fill flex-column">
+        <div className="bar">{output}</div>
+        <div className="fill" ref={monacoEl} />
+    </div>
 }
 
-const checkErrors = debounce(
+const tryCompile = debounce(
     100 /* milliseconds */,
-    function checkErrors( editor: IStandaloneCodeEditor ) {
+    function tryCompile( editor: IStandaloneCodeEditor, setOutput: ( output: string ) => void ) {
         let model = editor.getModel()
         if ( !model )
             return
         let source = model.getValue()
 
         try {
-            let ast = parseGrammar( source )
+            // let ast = parseGrammar( source )
+            let regexSource = parseGrammarToRegexSource( source )
+            setOutput( regexSource )
             monaco.editor.setModelMarkers( model, "owner", [] )
         } catch ( e ) {
-            let { location: { start, end } } = e
+            let message = e.toString()
+            setOutput( message )
+            let { location } = e
             if ( !location )
                 return
+            let { start, end } = location
             monaco.editor.setModelMarkers( model, "owner", [ {
                 severity: monaco.MarkerSeverity.Error,
-                message: e.toString(),
+                message: message,
                 startColumn: start.column,
                 startLineNumber: start.line,
                 endColumn: end.column,
@@ -70,19 +80,53 @@ const checkErrors = debounce(
 
 const sampleSoure = undent( `
     /*
-     *  Parse a date in the MM/DD/YYYY format.
-     *  Uses named capture groups for month, day and year.
+     *   This tool converts Peggy grammars into regexes.
+     *
+     *   Example: Parse a date in the MM/DD/YYYY format.
+     *   Creates named capture groups for month, day and year.
      */
-
     Date
         = month: MM "/" day: DD "/" year: YYYY
-        
     DD
         = [0-2][0-9]
-    
     MM
         = [0-1][0-9]
-
     YYYY
         = \\d|4|
+    
+    /*
+     *   Additions / changes to Peggy Grammar:
+     */
+
+    //  Look Behind assertions
+    NegativeLookBehind = <! "h" "ello"    // Only match "ello" if it is not preceded by "h".
+    PositiveLookBehind = <& "h" "ello"    // Only match "ello" if it is preceded by "h".
+
+    //  Lazy quantifiers
+    LazyZeroOrMore = \\w*? 
+    LazyOneOrMore = \\w+?
+    LazyOptional = \\w??
+
+    //  Built in regex classes
+    BuiltInClasses 
+        = \\d / \\D / \\w / \\W / \\s / \\S 
+        / \\b / \\B // Word boundary assertions.
+
+    //  Unicode character classes
+    UnicodeCharClass = \\p{Sc}
+
+    //  The symbol $ now means what it does in regex.
+    InputBoundaryAssertions 
+        = ^ "Hello World" $    // Generates: /^Hello World$/
+
+    //  Labels correspond to named capture groups, meaning they must be globally unique,
+    //  These rules will lead to an error because of the repeated month/day/year labels.
+    DateRange 
+        = (month: MM "/" day: DD "/" year: YYYY Date) "-" (month: MM "/" day: DD "/" year: YYYY Date)
+
+    //  Circular references are not allowed because regexes cannot support recursion.
+    List 
+        = "[" Element|.., ", "| "]"
+    Element
+        = Number / List
 `)

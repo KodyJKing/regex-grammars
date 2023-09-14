@@ -25,7 +25,8 @@ export function registerPegexLanguage() {
             { open: '(', close: ')', notIn: [ 'string', 'comment' ] },
             { open: '|', close: '|', notIn: [ 'string', 'comment' ] },
             { open: "'", close: "'", notIn: [ 'string', 'comment' ] },
-            { open: '"', close: '"', notIn: [ 'string', 'comment' ] }
+            { open: '"', close: '"', notIn: [ 'string', 'comment' ] },
+            { open: '/*', close: '*/', notIn: [ 'string', 'comment' ] }
         ],
         surroundingPairs: [
             // { open: '[', close: ']' },
@@ -38,7 +39,7 @@ export function registerPegexLanguage() {
 
     monaco.languages.setMonarchTokensProvider( PegexLanguageName, {
         // Set defaultToken to invalid to see what you do not tokenize yet
-        defaultToken: 'invalid',
+        // defaultToken: 'invalid',
 
         operators: [
             "+?", "*?", "??", "+", "*", "?",
@@ -79,7 +80,10 @@ export function registerPegexLanguage() {
                 [ /"/, 'string', '@string_double' ],
                 [ /'/, 'string', '@string_single' ],
 
-                [ /\[\^?(?:[^\\\[\]]|\\.)*\]/, "char_class" ]
+                [ /\[\^?(?:[^\\\[\]]|\\.)*\]/, "char_class" ],
+
+                // Regex escape classes
+                [ /\\[dDwWsSbB]/, "number" ],
             ],
 
             comment: [

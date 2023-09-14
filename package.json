@@ -13,6 +13,7 @@
     "watch:parser": "nodemon -w ./src/parser/parser.pegjs --exec yarn parser",
     "watch": "set VSCODE_INSPECTOR_OPTIONS= && run-p watch:*",
     "web": "vite --port 1234",
+    "build": "vite build",
     "parser": "peggy --format es -o ./src/parser/parser.js ./src/parser/parser.pegjs"
   },
   "dependencies": {
