@@ -102,8 +102,8 @@ const sampleSoure = undent( `
         / \\b / \\B // Word boundary assertions.
 
     //  Look Behind assertions
-    NegativeLookBehind = <! "h" "ello"  // Only match "ello" if it is not preceded by "h".
-    PositiveLookBehind = <& "h" "ello"  // Only match "ello" if it is preceded by "h".
+    NegativeLookBehind = <! "h" "ello" // Only match "ello" if it is not preceded by "h".
+    PositiveLookBehind = <& "h" "ello" // Only match "ello" if it is preceded by "h".
 
     //  Lazy quantifiers
     LazyZeroOrMore = \\w*? 
