@@ -50,8 +50,7 @@ const tryCompile = debounce(
     function tryCompile( editor: IStandaloneCodeEditor, setOutput: ( output: string ) => void ) {
 
         let model = editor.getModel()
-        if ( !model )
-            return
+        if ( !model ) return
         let source = model.getValue()
 
         try {
@@ -63,8 +62,7 @@ const tryCompile = debounce(
             let message = e.toString()
             setOutput( message )
             let { location } = e
-            if ( !location )
-                return
+            if ( !location ) return
             let { start, end } = location
             monaco.editor.setModelMarkers( model, "owner", [ {
                 severity: monaco.MarkerSeverity.Error,
@@ -80,12 +78,11 @@ const tryCompile = debounce(
 )
 
 const sampleSoure = undent( `
-    /*
-     *   This tool converts Peggy grammars into regexes.
-     *
-     *   Example: Parse a date in the MM/DD/YYYY format.
-     *   Creates named capture groups for month, day and year.
-     */
+    //
+    //  Convert Peggy grammars into regexes.
+    //  https://peggyjs.org/
+    //
+    
     Date
         = month: MM "/" day: DD "/" year: YYYY
     DD
@@ -95,9 +92,9 @@ const sampleSoure = undent( `
     YYYY
         = \\d|4|
     
-    /*
-     *   Additions / changes to Peggy Grammar:
-     */
+    //
+    //  Additions / changes to Peggy grammar:
+    //
 
     //  Built in regex classes
     BuiltInClasses 
