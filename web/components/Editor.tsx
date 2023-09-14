@@ -56,7 +56,7 @@ const tryCompile = debounce(
         try {
             // let ast = parseGrammar( source )
             let regexSource = parseGrammarToRegexSource( source )
-            setOutput( regexSource )
+            setOutput( `/${ regexSource }/` )
             monaco.editor.setModelMarkers( model, "owner", [] )
         } catch ( e ) {
             let message = e.toString()
@@ -82,7 +82,7 @@ const sampleSoure = undent( `
     //  Convert Peggy grammars into regexes.
     //  https://peggyjs.org/
     //
-    
+
     Date
         = month: MM "/" day: DD "/" year: YYYY
     DD
@@ -102,8 +102,8 @@ const sampleSoure = undent( `
         / \\b / \\B // Word boundary assertions.
 
     //  Look Behind assertions
-    NegativeLookBehind = <! "h" "ello"    // Only match "ello" if it is not preceded by "h".
-    PositiveLookBehind = <& "h" "ello"    // Only match "ello" if it is preceded by "h".
+    NegativeLookBehind = <! "h" "ello"  // Only match "ello" if it is not preceded by "h".
+    PositiveLookBehind = <& "h" "ello"  // Only match "ello" if it is preceded by "h".
 
     //  Lazy quantifiers
     LazyZeroOrMore = \\w*? 
@@ -113,14 +113,26 @@ const sampleSoure = undent( `
     //  Unicode character classes
     UnicodeCharClass = \\p{Sc}
 
+    //  Back references
+    BackReference = @.\\1
+    NamedBackReference = foo: . \\k<foo>
+
     //  The symbol $ now means what it does in regex.
     InputBoundaryAssertions 
-        = ^ "Hello World" $    // Generates: /^Hello World$/
+        = ^ "Hello World" $            // Generates: /^Hello World$/
 
-    //  Labels correspond to named capture groups, meaning they must be globally unique,
-    //  These rules will lead to an error because of the repeated month/day/year labels.
-    DateRange 
-        = (month: MM "/" day: DD "/" year: YYYY Date) "-" (month: MM "/" day: DD "/" year: YYYY Date)
+    //  Plucks transform to capture groups
+    Tuple 
+        = @\\d+ "," @\\d+               // Generates: /(\d+),(\d+)/
+
+    //  Labels transform to named capture groups.
+    FullName
+        = first: \\w+ " " last: \\w+    // Generates: /(?<first>\w+) (?<last>\w+)/
+    
+    //  Repeated labels will generate an invalid regex because named captures must be unique.
+    DateRange
+        = (month: MM "/" day: DD "/" year: YYYY Date) "-" 
+          (month: MM "/" day: DD "/" year: YYYY Date)
 
     //  Circular references are not allowed because regexes cannot support recursion.
     List 
