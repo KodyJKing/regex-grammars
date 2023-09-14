@@ -48,6 +48,7 @@ export function Editor() {
 const tryCompile = debounce(
     100 /* milliseconds */,
     function tryCompile( editor: IStandaloneCodeEditor, setOutput: ( output: string ) => void ) {
+
         let model = editor.getModel()
         if ( !model )
             return
@@ -98,6 +99,11 @@ const sampleSoure = undent( `
      *   Additions / changes to Peggy Grammar:
      */
 
+    //  Built in regex classes
+    BuiltInClasses 
+        = \\d / \\D / \\w / \\W / \\s / \\S 
+        / \\b / \\B // Word boundary assertions.
+
     //  Look Behind assertions
     NegativeLookBehind = <! "h" "ello"    // Only match "ello" if it is not preceded by "h".
     PositiveLookBehind = <& "h" "ello"    // Only match "ello" if it is preceded by "h".
@@ -106,11 +112,6 @@ const sampleSoure = undent( `
     LazyZeroOrMore = \\w*? 
     LazyOneOrMore = \\w+?
     LazyOptional = \\w??
-
-    //  Built in regex classes
-    BuiltInClasses 
-        = \\d / \\D / \\w / \\W / \\s / \\S 
-        / \\b / \\B // Word boundary assertions.
 
     //  Unicode character classes
     UnicodeCharClass = \\p{Sc}

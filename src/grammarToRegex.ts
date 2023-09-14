@@ -56,10 +56,13 @@ interface NodeFieldTypes {
 
 const conversionHandlers: NodeConversionHandlers = {
     grammar( node ) { throw createError( node, "Tried to convert grammar node to regex." ) },
-    // rule( node ) { throw createError( node, "Tried to convert rule node to regex." ) },
-    // rule_ref( node ) { throw createError( node, "Tried to convert rule_ref node to regex." ) },
     rule( node, ctx ) { return convert( node.expression, ctx ) },
-    rule_ref( node, ctx ) { return convert( ctx.rules[ node.name ], ctx ) },
+    rule_ref( node, ctx ) {
+        let referencedRule = ctx.rules[ node.name ]
+        if ( !referencedRule )
+            throw createError( node, `Referenced rule "${ node.name }" does not exist.` )
+        return convert( referencedRule, ctx )
+    },
 
     built_in_class( node ) { return node.regexText },
     unicode_char_class( node ) { return `\\p{${ node.regexText }}` },
@@ -138,21 +141,11 @@ function convert( node: Node, ctx: Context ): string {
     if ( !node )
         throw createError( ctx.stack[ ctx.stack.length - 1 ], `Tried to convert undefined node to regex.` )
 
-    // if ( node.type === "rule_ref" ) {
-    //     const { name } = node
-    //     const referencingNode = node
-    //     node = ctx.rules[ name ]
-    //     if ( !node )
-    //         throw createError( referencingNode, `Referenced rule, "${ name }", does not exist.` )
-    // }
-    // if ( node.type === "rule" )
-    //     node = node.expression
+    let transformer = transformers[ node.type ] as ( node: Node ) => Node
+    if ( transformer )
+        node = transformer( node ) ?? node
 
-    let transformer = transformers[ node.type ]
-    // @ts-ignore
-    if ( transformer ) node = transformer( node ) ?? node
-
-    let handler = conversionHandlers[ node.type ]
+    let handler = conversionHandlers[ node.type ] as ( node: Node, ctx: Context ) => string
     if ( !handler )
         throw createError( node, `Unhandled node type: ${ node.type }` )
 
@@ -161,7 +154,6 @@ function convert( node: Node, ctx: Context ): string {
 
     ctx.stack.push( node )
 
-    // @ts-ignore
     let result = handler( node, ctx )
 
     let parent = parentExpressions( ctx )
@@ -186,7 +178,7 @@ function createError( node: Node | undefined, message: string ) {
 
 export function grammarToRegexSource( grammar: Grammar ) {
     let context = createContext( grammar )
-    let startRule: Node = { type: "rule_ref", name: grammar.rules[ 0 ].name }
+    let startRule: Node = grammar.rules[ 0 ]
     return convert( startRule, context )
 }
 

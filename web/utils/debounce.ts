@@ -1,9 +1,9 @@
 export default function debounce<F extends Function>( millis: number, func: F ): F {
     let timeout: number | null = null
     return ( ( ...args ) => {
-        if ( timeout )
+        if ( timeout !== null )
             clearTimeout( timeout )
-        setTimeout( () => {
+        timeout = setTimeout( () => {
             timeout = null
             func( ...args )
         }, millis )
