@@ -130,14 +130,14 @@ const transformers: NodeTransformers = {
     repeated( node ) {
         let { expression, delimiter, min, max, lazy } = node
         if ( delimiter ) {
-            min = decrementLimit( min )
-            max = decrementLimit( max ) as RepeatLimit
             let result: Node = {
                 type: "sequence",
                 elements: [
                     expression,
                     {
-                        type: "repeated", min, max, lazy,
+                        type: "repeated", lazy,
+                        min: decrementLimit( min ),
+                        max: decrementLimit( max ) as RepeatLimit,
                         expression: { type: "sequence", elements: [ delimiter, expression ] }
                     }
                 ]
