@@ -37,6 +37,7 @@ body {
   height: 40px;
   padding: 8px 100px;
   text-align: center;
+  user-select: all;
 }
 
 @media (prefers-color-scheme: light) {
