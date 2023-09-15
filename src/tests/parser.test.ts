@@ -22,7 +22,8 @@ const grammar = `
 
     // InputBoundary = ^"Hello World!"$
 
-    MDNRef = "[MDN Reference](https://developer.mozilla.org" ("/"  \\w+)+ ")"
+    MDNRef "MDN Reference"
+        = "[MDN Reference](https://developer.mozilla.org" ("/"  \\w+)+ ")"
 
     // Composition = name: \\w+ \\s birthday: DateLabeled \\s country: \\w+
     // DateLabeled = month: MM "/" day: DD "/" year: YYYY

@@ -28,6 +28,7 @@ interface NodeFieldTypes {
     semantic_and: {}
     semantic_not: {}
 
+    named: { name: string, expression: Rule }
     rule: { name: string, expression: Rule }
     rule_ref: { name: string }
 
@@ -66,6 +67,7 @@ const conversionHandlers: NodeConversionHandlers = {
     semantic_and( node ) { throw createError( node, "JavaScript assertions are not supported." ) },
     semantic_not( node ) { throw createError( node, "JavaScript assertions are not supported." ) },
 
+    named( node, ctx ) { return convert( node.expression, ctx ) },
     rule( node, ctx ) { return convert( node.expression, ctx ) },
     rule_ref( node, ctx ) {
         let referencedRule = ctx.rules[ node.name ]
@@ -160,10 +162,10 @@ function convert( node: Node, ctx: Context ): string {
         throw createError( node, `Unhandled node type: ${ node.type }` )
 
     if ( ctx.stack.indexOf( node ) > -1 ) {
-        let ruleCycle = rulesOnStack( ctx )
+        let cycle = ruleNamesOnStack( ctx )
         if ( node.type === "rule" )
-            ruleCycle = ruleCycle.concat( [ node.name ] )
-        throw createError( node, `Grammar contains circular reference: ${ ruleCycle.join( " -> " ) }` )
+            cycle = cycle.concat( [ node.name ] )
+        throw createError( node, `Grammar contains circular reference: ${ cycle.join( " -> " ) }` )
     }
 
     ctx.stack.push( node )
@@ -173,7 +175,7 @@ function convert( node: Node, ctx: Context ): string {
     let parent = parentExpressions( ctx )
     if ( mustGroupToPreserveOrderOfOperations( node, parent ) ) {
         result = `(?:${ result })`
-        // console.log( `Grouping to avoid order of operations error ${ parent?.type }(${ node.type })` )
+        console.log( `Grouping to avoid order of operations error ${ parent?.type }(${ node.type })` )
     }
 
     ctx.stack.pop()
@@ -210,16 +212,20 @@ function createContext( grammar: Grammar ) {
     return result
 }
 
+/** These types would be removed by inlining, so we skip over them when looking for parent nodes. */
+const transparentTypes: ( keyof NodeTypes )[] = [ "rule", "rule_ref", "named" ]
+//
 function parentExpressions( ctx: Context ): Node | undefined {
-    for ( let i = 2; ; i-- ) {
-        let parent = ctx.stack[ ctx.stack.length - i ]
-        if ( !parent ) return
-        if ( parent.type !== "rule" && parent.type !== "rule_ref" )
+    for ( let i = ctx.stack.length - 2; i >= 0; i-- ) {
+        let parent = ctx.stack[ i ]
+        if ( !parent )
+            return
+        if ( transparentTypes.indexOf( parent.type ) === -1 )
             return parent
     }
 }
 
-function rulesOnStack( ctx: Context ) {
+function ruleNamesOnStack( ctx: Context ) {
     return ctx.stack.filter( node => node.type === "rule" ).map( node => ( node as Rule ).name )
 }
 
