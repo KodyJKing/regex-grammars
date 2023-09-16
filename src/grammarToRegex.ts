@@ -175,7 +175,7 @@ function convert( node: Node, ctx: Context ): string {
     let parent = parentExpressions( ctx )
     if ( mustGroupToPreserveOrderOfOperations( node, parent ) ) {
         result = `(?:${ result })`
-        console.log( `Grouping to avoid order of operations error ${ parent?.type }(${ node.type })` )
+        // console.log( `Grouping to avoid order of operations error ${ parent?.type }(${ node.type })` )
     }
 
     ctx.stack.pop()

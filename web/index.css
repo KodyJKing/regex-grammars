@@ -34,10 +34,12 @@ body {
 .bar {
   background-color: #1a1a1a;
   border-bottom: 1px solid #121212;
-  height: 40px;
   padding: 8px 100px;
   text-align: center;
   user-select: all;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 @media (prefers-color-scheme: light) {

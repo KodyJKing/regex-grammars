@@ -40,8 +40,8 @@ export function Editor() {
     }, [ monacoEl.current ] )
 
     return <div className="fill flex-column">
-        <div className="bar">{output}</div>
-        <div className="fill" ref={monacoEl} />
+        <div className="bar" style={{ flex: "1 1 40px" }}>{output}</div>
+        <div className="" style={{ flex: "1 1 auto" }} ref={monacoEl} />
     </div>
 }
 
