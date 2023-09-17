@@ -32,8 +32,8 @@ body {
   width: calc(100vw - 2em);
   height: calc(100vh - 2em);
   margin: 1em;
-  border-radius: 1em 1em 0 0;
-  /* border-radius: 1em; */
+  /* border-radius: 1em 1em 0 0; */
+  border-radius: 1em;
   overflow: hidden;
   background-color: var(--color-gray-2);
 }
