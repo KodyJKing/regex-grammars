@@ -115,7 +115,7 @@ function updateSearch( state: DecorationsState, model: monaco.editor.ITextModel,
         return
     }
     const classNames = [ "highlighted-text-1", "highlighted-text-2" ]
-    const matches = model.findMatches( text, false, true, false, null, true )
+    const matches = model.findMatches( text, false, true, true, null, true )
     state.decorations = model.deltaDecorations(
         state.decorations,
         matches.map( ( match, i ) => {
