@@ -50,6 +50,7 @@ export function Editor() {
                 onChanged={( value, editor ) => compileDebounced( editor, setOutput, setRegexSource )}
             />
             <Resizable flex
+                minWidth={25} minHeight={25}
                 style={{ alignSelf: "stretch", flex: "1" }}
                 left={landscape} top={!landscape}
             >
