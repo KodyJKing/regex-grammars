@@ -3,7 +3,8 @@ import * as monaco from "monaco-editor"
 export const PegexLanguageName = "pegex"
 
 let _registered = false
-export function registerPegexLanguage() {
+registerPegexLanguage()
+function registerPegexLanguage() {
     if ( _registered ) return
     _registered = true
 
