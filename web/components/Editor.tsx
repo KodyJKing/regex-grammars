@@ -149,7 +149,7 @@ const sampleSoure = undent( `
         = \\d|4|
     
     //
-    //  Additions / changes to Peggy grammar:
+    //  Additions and changes to Peggy grammar:
     //
 
     //  Built in regex classes
