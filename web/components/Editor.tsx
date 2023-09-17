@@ -1,69 +1,97 @@
-import React, { useRef, useState, useEffect } from 'react'
+import React, { useRef, useState, useEffect, useMemo } from 'react'
 import * as monaco from "monaco-editor"
 // import styles from './Editor.module.css'
 import { PegexLanguageName, registerPegexLanguage } from '../language/pegex.js'
 import { undent } from '../../src/utils/stringUtils.js'
 import { parseGrammar, parseGrammarToRegexSource } from '../../src/index.js'
 import debounce from '../utils/debounce.js'
+import { EditorType, MonacoEditor } from './MonacoEditor.js'
 
-type IStandaloneCodeEditor = monaco.editor.IStandaloneCodeEditor
+type DecorationsState = { decorations: string[] }
 
 export function Editor() {
-    const [ editor, setEditor ] = useState<IStandaloneCodeEditor | null>( null )
     const [ output, setOutput ] = useState<string>()
-    const monacoEl = useRef( null )
+    const [ regexSource, setRegexSource ] = useState<string>()
+    const [ sampleTextEditor, setTextEditor ] = useState<EditorType>()
+
+    const decorationsState = useMemo<DecorationsState>( () => { return { decorations: [] } }, [] )
 
     useEffect( () => {
-        if ( monacoEl ) {
-            setEditor( ( editor ) => {
-                if ( editor ) {
-                    return editor
-                }
+        if ( sampleTextEditor ) {
+            const model = sampleTextEditor.getModel()
+            if ( model )
+                search( decorationsState, model, regexSource )
+        }
+    }, [ regexSource, sampleTextEditor?.getValue() ] )
 
-                registerPegexLanguage()
-
-                const _editor = monaco.editor.create( monacoEl.current!, {
+    return <div className="fill flex-column">
+        <div className="output-bar" style={{ flex: "1 1 40px" }}>
+            {output}
+        </div>
+        <div
+            className="flex-row"
+            style={{ flex: "1 1 auto" }}
+        >
+            <MonacoEditor
+                style={{ flex: "1 1 auto" }}
+                options={{
                     value: sampleSoure,
                     language: PegexLanguageName,
                     theme: "vs-dark",
-                    automaticLayout: true
-                } )
-
-                _editor.onDidChangeModelContent( () => tryCompile( _editor, setOutput ) )
-                tryCompile( _editor, setOutput )
-
-                return _editor
-            } )
-        }
-
-        return () => editor?.dispose()
-    }, [ monacoEl.current ] )
-
-    return <div className="fill flex-column">
-        <div className="bar" style={{ flex: "1 1 40px" }}>{output}</div>
-        <div className="" style={{ flex: "1 1 auto" }} ref={monacoEl} />
+                    automaticLayout: true,
+                    minimap: { enabled: false }
+                }}
+                onEditor={editor => {
+                    registerPegexLanguage()
+                    editor.onDidChangeModelContent( () => tryCompile( editor, setOutput, setRegexSource ) )
+                    tryCompile( editor, setOutput, setRegexSource )
+                }}
+            />
+            <MonacoEditor
+                style={{ flex: `1 1 200px` }}
+                options={{
+                    value: sampleText,
+                    language: "text",
+                    theme: "vs-dark",
+                    automaticLayout: true,
+                    minimap: { enabled: false }
+                }}
+                onEditor={setTextEditor}
+            />
+        </div>
     </div>
 }
 
 const tryCompile = debounce(
     100 /* milliseconds */,
-    function tryCompile( editor: IStandaloneCodeEditor, setOutput: ( output: string ) => void ) {
+    function tryCompile(
+        editor: EditorType,
+        setOutput: ( output: string ) => void,
+        setRegexSource: ( regexSource: string | undefined ) => void
+    ) {
 
         let model = editor.getModel()
         if ( !model ) return
         let source = model.getValue()
 
         try {
-            // let ast = parseGrammar( source )
+
             let regexSource = parseGrammarToRegexSource( source )
             setOutput( `/${ regexSource }/` )
+            setRegexSource( regexSource )
             monaco.editor.setModelMarkers( model, "owner", [] )
+
         } catch ( e ) {
+
             let message = e.toString()
+
             setOutput( message )
+            setRegexSource( undefined )
+
             let { location } = e
             if ( !location ) return
             let { start, end } = location
+
             monaco.editor.setModelMarkers( model, "owner", [ {
                 severity: monaco.MarkerSeverity.Error,
                 message: message,
@@ -72,10 +100,36 @@ const tryCompile = debounce(
                 endColumn: end.column,
                 endLineNumber: end.line,
             } ] )
+
         }
 
     }
 )
+
+function search( state: DecorationsState, model: monaco.editor.ITextModel, text?: string ) {
+    if ( !text ) {
+        state.decorations = model.deltaDecorations( state.decorations, [] )
+        return
+    }
+    const classNames = [ "highlighted-text-1", "highlighted-text-2" ]
+    const matches = model.findMatches( text, false, true, false, null, true )
+    console.log( matches )
+    state.decorations = model.deltaDecorations(
+        state.decorations,
+        matches.map( ( match, i ) => {
+            return {
+                range: match.range,
+                options: { inlineClassName: classNames[ i % 2 ] }
+            }
+        } )
+    )
+}
+
+const sampleText = undent( `
+    This is a valid date: 03/15/1980
+    This is not: 23/15/1980
+    This is a another valid date: 01/12/2005
+`)
 
 const sampleSoure = undent( `
     //

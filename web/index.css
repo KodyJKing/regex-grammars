@@ -31,7 +31,7 @@ body {
 }
 
 
-.bar {
+.output-bar {
   background-color: #1a1a1a;
   border-bottom: 1px solid #121212;
   padding: 8px 100px;
@@ -41,6 +41,15 @@ body {
   align-items: center;
   justify-content: center;
 }
+
+.highlighted-text-1 {
+  background-color: #5d5f71;
+}
+
+.highlighted-text-2 {
+  background-color: #3c3e49;
+}
+
 
 @media (prefers-color-scheme: light) {
   :root {
