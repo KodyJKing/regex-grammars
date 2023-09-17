@@ -52,7 +52,7 @@ export function Editor() {
             try {
                 const regex = new RegExp( regexSource, "g" )
                 const pattern = jsReplacer ? parseFunction( replacementPattern ) : replacementPattern
-                if ( pattern )
+                if ( pattern !== undefined )
                     // @ts-ignore
                     replacementTextEditor.setValue( sampleText.replace( regex, pattern ) )
                 else
@@ -136,8 +136,12 @@ function PatternInput( props: { patternState, jsState } ) {
             onChange={e => setReplacementPattern( e.currentTarget.value )}
             style={{ flex: "1 1 auto", backgroundColor: "inherit" }}
         />
-        <label style={{ marginTop: "-1px" }}>JS</label>
-        <input type="checkbox" checked={jsReplacer} onChange={e => setJsReplacer( e.currentTarget.checked )} />
+        <label style={{ marginTop: "-1px" }} >JS</label>
+        <input
+            type="checkbox"
+            title="Interpret pattern as JS replacer function."
+            checked={jsReplacer} onChange={e => setJsReplacer( e.currentTarget.checked )}
+        />
     </div>
 }
 
