@@ -1,13 +1,12 @@
 import React, { useRef, useState, useEffect, useMemo } from 'react'
 import * as monaco from "monaco-editor"
-// import styles from './Editor.module.css'
 import { PegexLanguageName } from '../language/pegex.js'
 import { undent } from '../../src/utils/stringUtils.js'
-import { parseGrammar, parseGrammarToRegexSource } from '../../src/index.js'
+import { parseGrammarToRegexSource } from '../../src/index.js'
 import debounce from '../utils/debounce.js'
 import { EditorType, MonacoEditor } from './MonacoEditor.js'
-import { ResizableContainer } from './ResizableContainer.js'
-import { useSize } from '../hooks/useSize.js'
+import { Resizable } from './Resizable.js'
+import { useIsLandscape } from '../hooks/useSize.js'
 
 type DecorationsState = { decorations: string[] }
 
@@ -20,20 +19,20 @@ const editorSettings = {
 export function Editor() {
     const [ output, setOutput ] = useState<string>()
     const [ regexSource, setRegexSource ] = useState<string>()
+
     const [ sampleTextEditor, setTextEditor ] = useState<EditorType>()
     const [ sampleText, setSampleText ] = useState( "" )
 
     const decorationsState = useMemo<DecorationsState>( () => { return { decorations: [] } }, [] )
 
     const ref = useRef<HTMLDivElement>( null )
-    const [ width, height ] = useSize( ref )
-    const landscape = width > height
+    const landscape = useIsLandscape( ref )
 
     useEffect( () => {
         if ( sampleTextEditor ) {
             const model = sampleTextEditor.getModel()
             if ( model )
-                search( decorationsState, model, regexSource )
+                updateSearch( decorationsState, model, regexSource )
         }
     }, [ regexSource, sampleText ] )
 
@@ -43,14 +42,14 @@ export function Editor() {
         </div>
         <div
             className="flex-long-axis"
-            style={{ flex: "1 1 auto", gap: "1px 1px" }}
+            style={{ flex: "1 1 0px", gap: "1px 1px", maxHeight: "calc(100% - 40px)" }}
         >
             <MonacoEditor
                 style={{ flex: "1 1 200px", minWidth: "400px", minHeight: "200px" }}
                 options={{ value: sampleSoure, language: PegexLanguageName, ...editorSettings }}
                 onChanged={( value, editor ) => compileDebounced( editor, setOutput, setRegexSource )}
             />
-            <ResizableContainer flex
+            <Resizable flex
                 style={{ alignSelf: "stretch", flex: "1" }}
                 left={landscape} top={!landscape}
             >
@@ -60,7 +59,7 @@ export function Editor() {
                     onChanged={setSampleText}
                     onEditor={setTextEditor}
                 />
-            </ResizableContainer>
+            </Resizable>
         </div>
     </div>
 }
@@ -109,14 +108,13 @@ const compileDebounced = debounce(
     }
 )
 
-function search( state: DecorationsState, model: monaco.editor.ITextModel, text?: string ) {
+function updateSearch( state: DecorationsState, model: monaco.editor.ITextModel, text?: string ) {
     if ( !text ) {
         state.decorations = model.deltaDecorations( state.decorations, [] )
         return
     }
     const classNames = [ "highlighted-text-1", "highlighted-text-2" ]
     const matches = model.findMatches( text, false, true, false, null, true )
-    // console.log( matches )
     state.decorations = model.deltaDecorations(
         state.decorations,
         matches.map( ( match, i ) => {

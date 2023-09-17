@@ -8,7 +8,9 @@ enum MouseButtons {
 
 type State<T> = [ T, ( value: T ) => void ]
 
-export function ResizableContainer(
+type Dimension = "width" | "height"
+
+export function Resizable(
     props: React.HTMLAttributes<HTMLDivElement> & {
         left?: boolean, right?: boolean, top?: boolean, bottom?: boolean,
         flex?: boolean
@@ -29,11 +31,13 @@ export function ResizableContainer(
     const dragState = useRef( { dragging: false, capturedPointer: 0 } ).current
     const mainRef = useRef<HTMLDivElement>( null )
 
-    function setSize( dimension: string, size: string ) {
-        const style = mainRef.current?.style
+    function setSize( dimension: Dimension, size: string ) {
+        const div = mainRef.current
+        if ( !div ) return
+        const style = div.style
         if ( style && size.length > 0 ) {
             if ( flex )
-                style.flex = `0 0 ${ size }`
+                style.flex = `0 1 ${ size }`
             else
                 style[ dimension ] = size
         }
@@ -105,7 +109,7 @@ function ResizeHandle( { axis, sign, style, dragState, setSize, containerProps }
             else if ( axis == "y" )
                 setSize( "height", addToSize( "height", minHeight, e.movementY * sign ) )
 
-            function addToSize( dimension: string, minSize: number, addPixels: number ) {
+            function addToSize( dimension: Dimension, minSize: number, addPixels: number ) {
                 const sizeStyle = style[ dimension ]
                 const size = rect[ dimension ]
 
