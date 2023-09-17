@@ -52,8 +52,11 @@ export function Editor() {
             try {
                 const regex = new RegExp( regexSource, "g" )
                 const pattern = jsReplacer ? parseFunction( replacementPattern ) : replacementPattern
-                // @ts-ignore
-                replacementTextEditor.setValue( sampleText.replace( regex, pattern ) )
+                if ( pattern )
+                    // @ts-ignore
+                    replacementTextEditor.setValue( sampleText.replace( regex, pattern ) )
+                else
+                    replacementTextEditor.setValue( `Invalid ${ jsReplacer ? "function" : "pattern" }` )
             } catch ( e ) {
                 replacementTextEditor.setValue( e.toString() )
             }
@@ -128,7 +131,7 @@ function PatternInput( props: { patternState, jsState } ) {
     >
         <input
             placeholder="replacement pattern or function"
-            title="replacement pattern or function"
+            title="The pattern or function passed to String.replace(regex, patternOrFunction)"
             value={replacementPattern}
             onChange={e => setReplacementPattern( e.currentTarget.value )}
             style={{ flex: "1 1 auto", backgroundColor: "inherit" }}
