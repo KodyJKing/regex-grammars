@@ -81,12 +81,12 @@ const conversionHandlers: NodeConversionHandlers = {
     back_reference( node ) { return `\\${ node.index }` },
     named_back_reference( node ) { return `\\k<${ node.name }>` },
     class( node ) {
-        if ( node.ignoreCase ) throw new Error( "Case insensitive classes are not supported." )
+        if ( node.ignoreCase ) throw createError( node, "Case insensitive classes are not supported." )
         let parts = node.parts.map( classPartToRegex ).join( '' )
         return ( node.inverted ? '[^' : '[' ) + parts + ']'
     },
     literal( node ) {
-        if ( node.ignoreCase ) throw new Error( "Case insensitive literals are not supported." )
+        if ( node.ignoreCase ) throw createError( node, "Case insensitive literals are not supported." )
         return escapeRegExp( node.value )
     },
     any() { return "." },
@@ -102,7 +102,7 @@ const conversionHandlers: NodeConversionHandlers = {
     one_or_more_lazy: convertUnary( text => `${ text }+?` ),
     repeated( node, ctx ) {
         let { delimiter, min, max, lazy } = node
-        if ( delimiter ) throw new Error( "The transformation phase should have removed delimiters." )
+        if ( delimiter ) throw createError( node, "The transformation phase should have removed delimiters." )
         return `${ convert( node.expression, ctx ) }${ getRepeatOp( min, max, lazy ) }`
     },
 
