@@ -25,6 +25,7 @@ export function Resizable(
         minWidth = 200, minHeight = 200,
         handleWidth = 8,
         children, style,
+        ...rest
     } = props
 
     const dragState = useRef( { dragging: false, capturedPointer: 0 } ).current
@@ -48,6 +49,7 @@ export function Resizable(
     return <div
         ref={mainRef}
         style={{ ...extaStyle, ...style }}
+        {...rest}
     >
         {children}
         {[

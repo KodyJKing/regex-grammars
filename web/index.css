@@ -6,7 +6,8 @@
   --color-white: rgba(255, 255, 255, 0.87);
   --color-accent: rgba(165, 180, 255, 0.25);
 
-  --color-gray-2: #343434;
+  --color-gray-3: #343434;
+  --color-gray-2: #1E1E1E;
   --color-gray-1: #1a1a1a;
 
   color-scheme: light dark;
@@ -28,6 +29,12 @@ body {
   min-height: 100vh;
 }
 
+input {
+  font-family: Consolas, "Courier New", monospace;
+  border: none;
+  outline: none;
+}
+
 #root {
   width: calc(100vw - 2em);
   height: calc(100vh - 2em);
@@ -35,7 +42,7 @@ body {
   /* border-radius: 1em 1em 0 0; */
   border-radius: 1em;
   overflow: hidden;
-  background-color: var(--color-gray-2);
+  background-color: var(--color-gray-3);
 }
 
 

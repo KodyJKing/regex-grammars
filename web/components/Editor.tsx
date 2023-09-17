@@ -23,6 +23,10 @@ export function Editor() {
     const [ sampleTextEditor, setTextEditor ] = useState<EditorType>()
     const [ sampleText, setSampleText ] = useState( "" )
 
+    const [ replacementTextEditor, setReplacementTextEditor ] = useState<EditorType>()
+    const [ replacementPattern, setReplacementPattern ] = useState( `match => match.replaceAll("/", "-")` )
+    const [ jsReplacer, setJsReplacer ] = useState( true )
+
     const decorationsState = useMemo<DecorationsState>( () => { return { decorations: [] } }, [] )
 
     const ref = useRef<HTMLDivElement>( null )
@@ -36,32 +40,104 @@ export function Editor() {
         }
     }, [ regexSource, sampleText ] )
 
+    useEffect( () => {
+        if (
+            replacementTextEditor && regexSource && sampleText &&
+            replacementPattern !== undefined
+        ) {
+            const model = replacementTextEditor.getModel()
+            if ( !model )
+                return
+
+            try {
+                const regex = new RegExp( regexSource, "g" )
+                const pattern = jsReplacer ? parseFunction( replacementPattern ) : replacementPattern
+                if ( pattern )
+                    // @ts-ignore
+                    replacementTextEditor.setValue( sampleText.replace( regex, pattern ) )
+                else
+                    replacementTextEditor.setValue( `Invalid ${ jsReplacer ? "function" : "pattern" }` )
+            } catch ( e ) {
+                replacementTextEditor.setValue( e.toString() )
+            }
+        }
+    }, [ regexSource, sampleText, replacementPattern, jsReplacer ] )
+
     return <div ref={ref} className="fill flex-column">
         <div className="output-bar" style={{ flex: "0 0 40px" }}>
             {output}
         </div>
         <div
-            className="flex-long-axis"
             style={{ flex: "1 1 0px", gap: "1px 1px", maxHeight: "calc(100% - 40px)" }}
+            className="flex-long-axis"
         >
+            {/* Main Editor */}
             <MonacoEditor
                 style={{ flex: "1 1 200px", minWidth: "400px", minHeight: "200px" }}
                 options={{ value: sampleSoure, language: PegexLanguageName, ...editorSettings }}
                 onChanged={( value, editor ) => compileDebounced( editor, setOutput, setRegexSource )}
             />
+
+            {/* Test input */}
             <Resizable flex
                 minWidth={25} minHeight={25}
-                style={{ alignSelf: "stretch", flex: "1" }}
+                style={{ alignSelf: "stretch", flex: "1", gap: "1px 1px" }}
+                className="flex-short-axis"
                 left={landscape} top={!landscape}
             >
                 <MonacoEditor
-                    className="fill"
+                    style={{ flex: "1 1 200px", minWidth: "400px", minHeight: "200px" }}
                     options={{ value: initialSampleText, language: "plaintext", ...editorSettings }}
                     onChanged={setSampleText}
                     onEditor={setTextEditor}
                 />
+
+                {/* Replacement input/output */}
+                <Resizable flex
+                    minWidth={25} minHeight={25}
+                    style={{ alignSelf: "stretch", flex: "1 1 200px", backgroundColor: "var(--color-gray-2)" }}
+                    className="flex-column"
+                    left={!landscape} top={landscape}
+                >
+                    <PatternInput
+                        patternState={[ replacementPattern, setReplacementPattern ]}
+                        jsState={[ jsReplacer, setJsReplacer ]}
+                    />
+                    <MonacoEditor
+                        className="fill"
+                        style={{ flex: "1 1 200px", minWidth: "400px", minHeight: "200px" }}
+                        options={{ value: "", readOnly: true, language: "plaintext", ...editorSettings }}
+                        onEditor={setReplacementTextEditor}
+                    />
+                </Resizable>
+
             </Resizable>
         </div>
+    </div>
+}
+
+function PatternInput( props: { patternState, jsState } ) {
+    const {
+        patternState: [ replacementPattern, setReplacementPattern ],
+        jsState: [ jsReplacer, setJsReplacer ]
+    } = props
+    return <div
+        className="flex-row"
+        style={{
+            backgroundColor: "var(--color-gray-1)",
+            alignItems: "center",
+            padding: "8px"
+        }}
+    >
+        <input
+            placeholder="replacement pattern or function"
+            title="The pattern or function passed to String.replace(regex, patternOrFunction)"
+            value={replacementPattern}
+            onChange={e => setReplacementPattern( e.currentTarget.value )}
+            style={{ flex: "1 1 auto", backgroundColor: "inherit" }}
+        />
+        <label style={{ marginTop: "-1px" }}>JS</label>
+        <input type="checkbox" checked={jsReplacer} onChange={e => setJsReplacer( e.currentTarget.checked )} />
     </div>
 }
 
@@ -125,6 +201,11 @@ function updateSearch( state: DecorationsState, model: monaco.editor.ITextModel,
             }
         } )
     )
+}
+
+function parseFunction( source: string ): Function | undefined {
+    const factory = new Function( `return ${ source }` )
+    return factory()
 }
 
 const initialSampleText = undent( `
