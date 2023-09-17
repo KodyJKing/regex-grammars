@@ -2,7 +2,7 @@
   "name": "regex-grammars",
   "version": "1.0.0",
   "main": "main.js",
-  "license": "None",
+  "license": "MIT",
   "type": "module",
   "exports": {
     "./*": "./lib/src/*.js"
