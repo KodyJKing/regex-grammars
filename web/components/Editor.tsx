@@ -14,10 +14,11 @@ import { parseFunction } from '../utils/utils.js'
 
 type DecorationsState = { decorations: string[] }
 
-const editorSettings = {
+const editorSettings: monaco.editor.IStandaloneEditorConstructionOptions = {
     theme: "vs-dark",
     automaticLayout: true,
-    minimap: { enabled: false }
+    minimap: { enabled: false },
+    overviewRulerBorder: false,
 }
 
 const editorStyle: React.CSSProperties = {
@@ -103,7 +104,7 @@ export function Editor() {
                 {/* Options */}
                 <div
                     className="flex-row flex-center bg-gray-1 pad-m"
-                    style={{ margin: "1px 0px", gap: "4px", fontSize: "12px" }}
+                    style={{ margin: "1px 0px 0px 0px", gap: "4px", fontSize: "12px" }}
                 >
                     {/* <label className="no-select">Flags:</label>
                     <Input style={{ color: "red" }} value={flags} setValue={setFlags} /> */}
