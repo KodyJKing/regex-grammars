@@ -18,7 +18,8 @@ type Node = NodeTypes[ keyof NodeTypes ]
 export type Grammar = NodeTypes[ "grammar" ]
 type Rule = NodeTypes[ "rule" ]
 
-type Context = { rules: Record<string, Rule>, stack: Node[] }
+export type ConversionOptions = { noNonCaptureGroups: boolean }
+type Context = { rules: Record<string, Rule>, stack: Node[], options: ConversionOptions }
 
 type RepeatLimit = { value: number }
 
@@ -36,7 +37,7 @@ interface NodeFieldTypes {
     unicode_char_class: { regexText: string }
     back_reference: { index: number }
     named_back_reference: { name: string }
-    class: { parts: string[][], inverted: boolean, ignoreCase: boolean }
+    class: { parts: string[][], text: string, inverted: boolean, ignoreCase: boolean }
     literal: { value: string, ignoreCase: boolean }
     any: {}
 
@@ -82,8 +83,9 @@ const conversionHandlers: NodeConversionHandlers = {
     named_back_reference( node ) { return `\\k<${ node.name }>` },
     class( node ) {
         if ( node.ignoreCase ) throw createError( node, "Case insensitive classes are not supported." )
-        let parts = node.parts.map( classPartToRegex ).join( '' )
-        return ( node.inverted ? '[^' : '[' ) + parts + ']'
+        return node.text
+        // let parts = node.parts.map( classPartToRegex ).join( '' )
+        // return ( node.inverted ? '[^' : '[' ) + parts + ']'
     },
     literal( node ) {
         if ( node.ignoreCase ) throw createError( node, "Case insensitive literals are not supported." )
@@ -111,7 +113,12 @@ const conversionHandlers: NodeConversionHandlers = {
             return `(${ convert( node.expression, ctx ) })`
         return `(?<${ node.label }>${ convert( node.expression, ctx ) })`
     },
-    group( node, ctx ) { return `(?:${ convert( node.expression, ctx ) })` },
+    group( node, ctx ) {
+        if ( ctx.options.noNonCaptureGroups )
+            return `(${ convert( node.expression, ctx ) })`
+        else
+            return `(?:${ convert( node.expression, ctx ) })`
+    },
 
     simple_not: convertUnary( text => `(?!${ text })` ),
     simple_and: convertUnary( text => `(?=${ text })` ),
@@ -174,7 +181,10 @@ function convert( node: Node, ctx: Context ): string {
 
     let parent = parentExpressions( ctx )
     if ( mustGroupToPreserveOrderOfOperations( node, parent ) ) {
-        result = `(?:${ result })`
+        if ( ctx.options.noNonCaptureGroups )
+            result = `(${ result })`
+        else
+            result = `(?:${ result })`
         // console.log( `Grouping to avoid order of operations error ${ parent?.type }(${ node.type })` )
     }
 
@@ -192,17 +202,17 @@ function createError( node: Node | undefined, message: string ) {
     )
 }
 
-export function grammarToRegexSource( grammar: Grammar ) {
+export function grammarToRegexSource( grammar: Grammar, options: ConversionOptions = { noNonCaptureGroups: false } ) {
     if ( grammar.initializer ) throw createError( grammar.initializer, "JavaScript initializers are not supported." )
     if ( grammar.topLevelInitializer ) throw createError( grammar.topLevelInitializer, "JavaScript initializers are not supported." )
 
-    let context = createContext( grammar )
+    let context = createContext( grammar, options )
     let startRule: Node = grammar.rules[ 0 ]
     return convert( startRule, context )
 }
 
-function createContext( grammar: Grammar ) {
-    let result: Context = { rules: {}, stack: [] }
+function createContext( grammar: Grammar, options: ConversionOptions ) {
+    let result: Context = { rules: {}, stack: [], options }
     let { rules } = result
     for ( let rule of grammar.rules ) {
         if ( rules[ rule.name ] )
@@ -227,10 +237,6 @@ function parentExpressions( ctx: Context ): Node | undefined {
 
 function ruleNamesOnStack( ctx: Context ) {
     return ctx.stack.filter( node => node.type === "rule" ).map( node => ( node as Rule ).name )
-}
-
-function classPartToRegex( part: any ) {
-    return typeof part == 'string' ? escapeRegExp( part ) : escapeRegExp( part[ 0 ] ) + '-' + escapeRegExp( part[ 1 ] )
 }
 
 function decrementLimit( limit?: RepeatLimit ) {
