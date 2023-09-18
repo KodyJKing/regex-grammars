@@ -10,6 +10,8 @@
   --color-gray-2: #1E1E1E;
   --color-gray-1: #1a1a1a;
 
+  --color-error: #df5353;
+
   color-scheme: light dark;
   color: var(--color-white);
   background-color: #242424;
@@ -45,17 +47,6 @@ input {
   background-color: var(--color-gray-3);
 }
 
-
-.output-bar {
-  background-color: var(--color-gray-1);
-  padding: 8px 100px;
-  text-align: center;
-  user-select: all;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
 .highlighted-text-1 {
   background-color: #7378a3;
 }
@@ -63,7 +54,6 @@ input {
 .highlighted-text-2 {
   background-color: #4b4f65;
 }
-
 
 @media (prefers-color-scheme: light) {
   :root {
@@ -93,11 +83,8 @@ input {
   .flex-short-axis-reverse { display: flex; flex-direction: row-reverse; }
 }
 
-.well {
-  background-color: #1e1e1e;
-  border-radius: 16px;
-  padding: 16px;
-}
+.center-text { text-align: center; }
+.no-select { user-select: none; }
 
 .fill {
   width: 100%;
@@ -117,3 +104,13 @@ input {
   display: flex;
   flex-direction: row;
 }
+
+.flex-center { align-items: center; }
+.flex-center-self { align-self: center; }
+
+.bg-gray-1 { background-color: var(--color-gray-1); }
+.bg-gray-2 { background-color: var(--color-gray-2); }
+.bg-gray-3 { background-color: var(--color-gray-3); }
+
+.pad-s { padding: 4px; }
+.pad-m { padding: 8px; }

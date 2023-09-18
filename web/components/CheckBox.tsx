@@ -1,17 +1,10 @@
-import React from 'react';
+import React from 'react'
+import { Labeled } from './Labeled.js';
 
 export function CheckBox( props ) {
-    const { label, value, setValue, ...rest } = props;
-    return <div
-        className="flex-row"
-        style={{
-            alignItems: "stretch",
-            userSelect: "none"
-        }}
-        onClick={e => setValue( !value )}
-        {...rest}
-    >
-        <label>{label}</label>
+    const { value, setValue, ...rest } = props
+    return <Labeled {...rest} onClick={e => setValue( !value )} >
         <input type="checkbox" checked={value} onChange={e => setValue( e.currentTarget.checked )} />
-    </div>;
+    </Labeled>
 }
+
