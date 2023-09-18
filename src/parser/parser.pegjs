@@ -452,7 +452,8 @@ CharacterClassMatcher "character class"
         parts: parts.filter(part => part !== ""),
         inverted: inverted !== null,
         ignoreCase: ignoreCase !== null,
-        location: location()
+        location: location(),
+        text: text()
       };
     }
 
