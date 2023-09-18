@@ -7,6 +7,8 @@ import debounce from '../utils/debounce.js'
 import { EditorType, MonacoEditor } from './MonacoEditor.js'
 import { Resizable } from './Resizable.js'
 import { useIsLandscape } from '../hooks/useSize.js'
+import { CheckBox } from './CheckBox.js'
+import { ConversionOptions } from '../grammarToRegex.js'
 
 type DecorationsState = { decorations: string[] }
 
@@ -17,6 +19,10 @@ const editorSettings = {
 }
 
 export function Editor() {
+    const [ grammarSource, setGrammarSource ] = useState<string>( "" )
+    const [ grammarTextEditor, setGrammarEditor ] = useState<EditorType>()
+    const [ conversionOptions, setConversionOptions ] = useState( { noNonCaptureGroups: false } )
+
     const [ output, setOutput ] = useState<string>()
     const [ regexSource, setRegexSource ] = useState<string>()
 
@@ -32,6 +38,13 @@ export function Editor() {
     const ref = useRef<HTMLDivElement>( null )
     const landscape = useIsLandscape( ref )
 
+    // Compile grammar
+    useEffect( () => {
+        if ( grammarTextEditor )
+            compileDebounced( grammarTextEditor, setOutput, setRegexSource, conversionOptions )
+    }, [ grammarSource, conversionOptions ] )
+
+    // Update text search
     useEffect( () => {
         if ( sampleTextEditor ) {
             const model = sampleTextEditor.getModel()
@@ -40,6 +53,7 @@ export function Editor() {
         }
     }, [ regexSource, sampleText ] )
 
+    // Update text repacement
     useEffect( () => {
         if (
             replacementTextEditor && regexSource && sampleText &&
@@ -64,27 +78,54 @@ export function Editor() {
     }, [ regexSource, sampleText, replacementPattern, jsReplacer ] )
 
     return <div ref={ref} className="fill flex-column">
-        <div className="output-bar" style={{ flex: "0 0 40px" }}>
-            {output}
-        </div>
+        <div className="output-bar" style={{ flex: "0 0 40px" }} >{output}</div>
         <div
             style={{ flex: "1 1 0px", gap: "1px 1px", maxHeight: "calc(100% - 40px)" }}
             className="flex-long-axis"
         >
-            {/* Main Editor */}
-            <MonacoEditor
+            {/* Primary pane */}
+            <div
+                className="flex-column"
                 style={{ flex: "1 1 200px", minWidth: "400px", minHeight: "200px" }}
-                options={{ value: sampleSoure, language: PegexLanguageName, ...editorSettings }}
-                onChanged={( value, editor ) => compileDebounced( editor, setOutput, setRegexSource )}
-            />
+            >
+                {/* Options */}
+                <div
+                    className="flex-row"
+                    style={{
+                        margin: "1px 0px",
+                        backgroundColor: "var(--color-gray-1)",
+                        padding: "8px", gap: "4px",
+                        alignItems: "center",
+                        fontSize: "12px"
+                    }}
+                >
+                    <CheckBox
+                        label="Always use capture groups"
+                        title="Replaces non-capture groups with capture groups to reduce size."
+                        value={conversionOptions.noNonCaptureGroups}
+                        setValue={value => setConversionOptions( oldOptions => {
+                            return { ...oldOptions, noNonCaptureGroups: value }
+                        } )}
+                    />
+                </div>
 
-            {/* Test input */}
+                {/* Main Editor */}
+                <MonacoEditor
+                    style={{ flex: "1 1 200px", minWidth: "400px", minHeight: "200px" }}
+                    options={{ value: sampleSoure, language: PegexLanguageName, ...editorSettings }}
+                    onEditor={setGrammarEditor}
+                    onChanged={setGrammarSource}
+                />
+            </div>
+
+            {/* Secondary pane */}
             <Resizable flex
                 minWidth={25} minHeight={25}
                 style={{ alignSelf: "stretch", flex: "1", gap: "1px 1px" }}
                 className="flex-short-axis"
                 left={landscape} top={!landscape}
             >
+                {/* Test input */}
                 <MonacoEditor
                     style={{ flex: "1 1 200px", minWidth: "400px", minHeight: "200px" }}
                     options={{ value: initialSampleText, language: "plaintext", ...editorSettings }}
@@ -136,21 +177,20 @@ function PatternInput( props: { patternState, jsState } ) {
             onChange={e => setReplacementPattern( e.currentTarget.value )}
             style={{ flex: "1 1 auto", backgroundColor: "inherit" }}
         />
-        <label style={{ marginTop: "-1px" }} >JS</label>
-        <input
-            type="checkbox"
-            title="Interpret pattern as JS replacer function."
-            checked={jsReplacer} onChange={e => setJsReplacer( e.currentTarget.checked )}
+        <CheckBox
+            label="JS" title="Interpret pattern as JS replacer function."
+            value={jsReplacer} setValue={setJsReplacer}
         />
     </div>
 }
 
 const compileDebounced = debounce(
-    100 /* milliseconds */,
+    50 /* milliseconds */,
     function compile(
         editor: EditorType,
         setOutput: ( output: string ) => void,
-        setRegexSource: ( regexSource: string | undefined ) => void
+        setRegexSource: ( regexSource: string | undefined ) => void,
+        conversionOptions: ConversionOptions
     ) {
 
         let model = editor.getModel()
@@ -159,7 +199,7 @@ const compileDebounced = debounce(
 
         try {
 
-            let regexSource = parseGrammarToRegexSource( source )
+            let regexSource = parseGrammarToRegexSource( source, conversionOptions )
             setOutput( `/${ regexSource }/` )
             setRegexSource( regexSource )
             monaco.editor.setModelMarkers( model, "owner", [] )
