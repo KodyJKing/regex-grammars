@@ -25,12 +25,12 @@ const editorStyle: React.CSSProperties = {
     flex: "1 1 200px", minWidth: "400px", minHeight: "200px"
 }
 
-export function Editor() {
+export function Editor( props: { grammarSource, sampleText, replacementPattern } ) {
     const [ grammarSource, setGrammarSource ] = useState<string>( "" )
     const [ grammarTextEditor, setGrammarEditor ] = useState<EditorType>()
     const [ conversionOptions, setConversionOptions ] = useState( { noNonCaptureGroups: false } )
 
-    // const [ flags, setFlags ] = useState( "gmu" )
+    const [ flags, setFlags ] = useState( "gm" )
 
     const [ error, setError ] = useState<any>()
     const [ regexSource, setRegexSource ] = useState<string>()
@@ -39,7 +39,7 @@ export function Editor() {
     const [ sampleText, setSampleText ] = useState( "" )
 
     const [ replacementTextEditor, setReplacementTextEditor ] = useState<EditorType>()
-    const [ replacementPattern, setReplacementPattern ] = useState( `match => match.replaceAll("/", "-")` )
+    const [ replacementPattern, setReplacementPattern ] = useState( props.replacementPattern )
     const [ jsReplacer, setJsReplacer ] = useState( true )
 
     const decorationsState = useMemo<DecorationsState>( () => { return { decorations: [] } }, [] )
@@ -58,9 +58,9 @@ export function Editor() {
         if ( sampleTextEditor ) {
             const model = sampleTextEditor.getModel()
             if ( model )
-                updateSearch( decorationsState, model, regexSource )
+                updateSearch( decorationsState, model, regexSource, flags )
         }
-    }, [ regexSource, sampleText ] )
+    }, [ regexSource, sampleText, flags ] )
 
     // Update text repacement
     useEffect( () => {
@@ -73,7 +73,7 @@ export function Editor() {
                 return
 
             try {
-                const regex = new RegExp( regexSource, "gmu" )
+                const regex = new RegExp( regexSource, flags )
                 const pattern = jsReplacer ? parseFunction( replacementPattern ) : replacementPattern
                 if ( pattern !== undefined )
                     // @ts-ignore
@@ -84,47 +84,31 @@ export function Editor() {
                 replacementTextEditor.setValue( e.toString() )
             }
         }
-    }, [ regexSource, sampleText, replacementPattern, jsReplacer ] )
+    }, [ regexSource, sampleText, replacementPattern, jsReplacer, flags ] )
 
     return <div ref={ref} className="fill flex-column">
-        {/* Output bar */}
-        <div
-            className="flex-column align-center bg-gray-1 pad-m center-text"
-            style={{
-                flex: "0 0 40px", userSelect: error ? "initial" : "all", justifyContent: "center",
-                color: error ? "var(--color-error)" : undefined
-            }}
-        >
-            {error ?? `/${ regexSource }/gmu`}
-        </div>
+
+        <OutputBar {...{ error, regexSource, flags }} />
 
         <div className="flex-long-axis" style={{ flex: "1 1 auto", gap: "1px 1px", maxHeight: "calc(100% - 40px)" }} >
+
             {/* Primary pane */}
             <div className="flex-column" style={{ flex: "1 1 200px", minWidth: "400px", minHeight: "200px" }}>
-                {/* Options */}
-                <div
-                    className="flex-row flex-center bg-gray-1 pad-m"
-                    style={{ margin: "1px 0px 0px 0px", gap: "4px", fontSize: "12px" }}
-                >
-                    {/* <label className="no-select">Flags:</label>
-                    <Input style={{ color: "red" }} value={flags} setValue={setFlags} /> */}
-                    <CheckBox
-                        label="Always use capture groups"
-                        title="Replaces non-capture groups with capture groups to reduce size."
-                        value={conversionOptions.noNonCaptureGroups}
-                        setValue={value => setConversionOptions( oldOptions => {
-                            return { ...oldOptions, noNonCaptureGroups: value }
-                        } )}
-                    />
-                </div>
 
-                {/* Main Editor */}
+                <OptionsInput {...{
+                    flags, setFlags,
+                    conversionOptions,
+                    setConversionOptions
+                }} />
+
+                {/* Grammar editor */}
                 <MonacoEditor
                     style={editorStyle}
                     onEditor={setGrammarEditor}
                     onChanged={setGrammarSource}
-                    options={{ value: sampleSoure, language: PegexLanguageName, ...editorSettings }}
+                    options={{ value: props.grammarSource, language: PegexLanguageName, ...editorSettings }}
                 />
+
             </div>
 
             {/* Secondary pane */}
@@ -134,18 +118,18 @@ export function Editor() {
                 left={landscape} top={!landscape}
                 minWidth={25} minHeight={25}
             >
-                {/* Test input */}
+
+                {/* Test input editor */}
                 <MonacoEditor
                     style={editorStyle}
                     onChanged={setSampleText}
                     onEditor={setTextEditor}
                     options={{
-                        value: initialSampleText, renderWhitespace: "all",
+                        value: props.sampleText, renderWhitespace: "all",
                         language: "plaintext", ...editorSettings
                     }}
                 />
 
-                {/* Replacement input/output */}
                 <Resizable flex
                     className="flex-column bg-gray-2"
                     style={{ alignSelf: "stretch", flex: "1" }}
@@ -156,6 +140,7 @@ export function Editor() {
                         patternState={[ replacementPattern, setReplacementPattern ]}
                         jsState={[ jsReplacer, setJsReplacer ]}
                     />
+                    {/* Replacement editor */}
                     <MonacoEditor
                         style={editorStyle}
                         onEditor={setReplacementTextEditor}
@@ -169,6 +154,36 @@ export function Editor() {
             </Resizable>
         </div>
 
+    </div>
+}
+
+function OutputBar( { error, regexSource, flags } ) {
+    return <div
+        className="flex-column align-center bg-gray-1 pad-m center-text"
+        style={{
+            flex: "0 0 40px", userSelect: error ? "initial" : "all", justifyContent: "center",
+            color: error ? "var(--color-error)" : undefined
+        }}
+    >
+        {error ?? `/${ regexSource }/${ flags }`}
+    </div>
+}
+
+function OptionsInput( { flags, setFlags, conversionOptions, setConversionOptions } ) {
+    return <div
+        className="flex-row flex-center bg-gray-1 pad-m"
+        style={{ margin: "1px 0px 0px 0px", gap: "4px", fontSize: "12px" }}
+    >
+        <label className="no-select">Flags:</label>
+        <Input value={flags} setValue={setFlags} pattern={/^(?:([gimsuy])(?!.*\1))*$/} />
+        <CheckBox
+            label="Always use capture groups"
+            title="Replaces non-capture groups with capture groups to reduce size."
+            value={conversionOptions.noNonCaptureGroups}
+            setValue={value => setConversionOptions( oldOptions => {
+                return { ...oldOptions, noNonCaptureGroups: value }
+            } )}
+        />
     </div>
 }
 
@@ -198,13 +213,13 @@ const compileDebounced = debounce(
         setRegexSource: ( regexSource: string | undefined ) => void,
         conversionOptions: ConversionOptions
     ) {
-
         let model = editor.getModel()
-        if ( !model ) return
-        let source = model.getValue()
+        if ( !model )
+            return
 
         try {
 
+            let source = model.getValue()
             let regexSource = parseGrammarToRegexSource( source, conversionOptions )
             setError( undefined )
             setRegexSource( regexSource )
@@ -235,90 +250,38 @@ const compileDebounced = debounce(
     }
 )
 
-function updateSearch( state: DecorationsState, model: monaco.editor.ITextModel, regexSource: string | undefined ) {
+function updateSearch( state: DecorationsState, model: monaco.editor.ITextModel, regexSource: string | undefined, flags: string ) {
     if ( !regexSource ) {
         state.decorations = model.deltaDecorations( state.decorations, [] )
         return
     }
+
     const classNames = [ "highlighted-text-1", "highlighted-text-2" ]
-    // Todo: Replace model.findMatches with custom code that supports any regex flags.
-    const matches = model.findMatches( regexSource, false, true, true, null, true )
+
+    const modelText = model.getValue()
+    const regex = new RegExp( regexSource, flags )
+    const matches = regex.global
+        ? Array.from( modelText.matchAll( regex ) )
+        : [ modelText.match( regex ) ].filter( m => m ) as [ RegExpMatchArray ]
+
     state.decorations = model.deltaDecorations(
         state.decorations,
         matches.map( ( match, i ) => {
             return {
-                range: match.range,
+                range: matchRange( match ),
                 options: { inlineClassName: classNames[ i % 2 ] }
             }
         } )
     )
+
+    function matchRange( match: RegExpMatchArray ) {
+        const start = match.index ?? 0
+        const end = start + match[ 0 ].length
+        const startPos = model.getPositionAt( start )
+        const endPos = model.getPositionAt( end )
+        return new monaco.Range(
+            startPos.lineNumber, startPos.column,
+            endPos.lineNumber, endPos.column
+        )
+    }
 }
-
-const initialSampleText = undent( `
-    This is a valid date: 03/15/1980
-    This is not: 23/15/1980
-    This is a another valid date: 01/12/2005
-`)
-const sampleSoure = undent( `
-    //
-    //  Convert Peggy grammars into regexes.
-    //  https://peggyjs.org/
-    //
-
-    Date
-        = month: MM "/" day: DD "/" year: YYYY
-    DD
-        = [0-2][0-9]
-    MM
-        = [0-1][0-9]
-    YYYY
-        = \\d|4|
-    
-    //
-    //  Additions and changes to Peggy grammar:
-    //
-
-    //  Built in regex classes
-    BuiltInClasses 
-        = \\d / \\D / \\w / \\W / \\s / \\S 
-        / \\b / \\B // Word boundary assertions.
-
-    //  Look behind assertions
-    NegativeLookBehind = <! "h" "ello" // Only match "ello" if it is not preceded by "h".
-    PositiveLookBehind = <& "h" "ello" // Only match "ello" if it is preceded by "h".
-
-    //  Lazy quantifiers
-    LazyZeroOrMore = \\w*? 
-    LazyOneOrMore = \\w+?
-    LazyOptional = \\w??
-
-    //  Unicode character classes
-    UnicodeCharClass = \\p{Sc}
-
-    //  Back references
-    BackReference = @.\\1
-    NamedBackReference = foo: . \\k<foo>
-
-    //  The symbol $ now means what it does in regex.
-    InputBoundaryAssertions 
-        = ^ "Hello World" $            // Generates: /^Hello World$/
-
-    //  Plucks transform to capture groups
-    Tuple 
-        = @\\d+ "," @\\d+               // Generates: /(\d+),(\d+)/
-
-    //  Labels transform to named capture groups.
-    FullName
-        = first: \\w+ " " last: \\w+    // Generates: /(?<first>\w+) (?<last>\w+)/
-    
-    //  Repeated labels will generate an invalid regex because named captures must be unique.
-    DateRange
-        = (month: MM "/" day: DD "/" year: YYYY Date) "-" 
-          (month: MM "/" day: DD "/" year: YYYY Date)
-
-    //  Circular references are not allowed because regexes cannot support recursion.
-    List 
-        = "[" Element|.., ", "| "]"
-    Element
-        = Number / List
-`)

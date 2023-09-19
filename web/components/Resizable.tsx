@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect } from "react"
 
+import classes from "./Resizeable.module.css"
+
 enum MouseButtons {
     Left = 0,
     Middle = 1,
@@ -33,11 +35,12 @@ export function Resizable(
 
     const size = `${ handleWidth }px`
     const handleProps = { dragState, containerProps: { ...props, minWidth, minHeight } }
-    const handleStyles = {
-        left: { left: "0px", top: "0px", width: size, height: "100%", cursor: "col-resize" },
-        right: { right: "0px", top: "0px", width: size, height: "100%", cursor: "col-resize" },
-        top: { left: "0px", top: "0px", height: size, width: "100%", cursor: "row-resize" },
-        bottom: { left: "0px", bottom: "0px", height: size, width: "100%", cursor: "row-resize" },
+    const borderStyle = "2px"
+    const handleStyles: Record<string, React.CSSProperties> = {
+        left: { left: "0px", top: "0px", width: size, height: "100%", cursor: "col-resize", borderLeftWidth: borderStyle },
+        right: { right: "0px", top: "0px", width: size, height: "100%", cursor: "col-resize", borderRightWidth: borderStyle },
+        top: { left: "0px", top: "0px", height: size, width: "100%", cursor: "row-resize", borderTopWidth: borderStyle },
+        bottom: { left: "0px", bottom: "0px", height: size, width: "100%", cursor: "row-resize", borderBottomWidth: borderStyle },
     }
 
     const extaStyle: React.CSSProperties = {
@@ -65,6 +68,7 @@ function ResizeHandle( { axis, sign, style, dragState, containerProps } ) {
     const { minWidth, minHeight, flex } = containerProps
 
     return <div
+        className={classes.ResizeHandle}
         style={{ position: "absolute", ...style }}
 
         onPointerDown={e => {
