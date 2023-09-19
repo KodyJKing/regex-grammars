@@ -1,7 +1,6 @@
 import React, { useRef, useState, useEffect, useMemo } from 'react'
 import * as monaco from "monaco-editor"
 import { PegexLanguageName } from '../language/pegex.js'
-import { undent } from '../../src/utils/stringUtils.js'
 import { parseGrammarToRegexSource } from '../../src/index.js'
 import debounce from '../utils/debounce.js'
 import { EditorType, MonacoEditor } from './MonacoEditor.js'
@@ -264,17 +263,34 @@ function updateSearch( state: DecorationsState, model: monaco.editor.ITextModel,
         ? Array.from( modelText.matchAll( regex ) )
         : [ modelText.match( regex ) ].filter( m => m ) as [ RegExpMatchArray ]
 
-    console.log( matches )
-
     state.decorations = model.deltaDecorations(
         state.decorations,
         matches.map( ( match, i ) => {
             return {
                 range: matchRange( match ),
-                options: { inlineClassName: classNames[ i % 2 ] }
+                options: {
+                    inlineClassName: classNames[ i % 2 ],
+                    hoverMessage: { value: getMatchTable( match ) }
+                }
             }
         } )
     )
+
+    function getMatchTable( match: RegExpMatchArray ) {
+        let lines: string[] = []
+
+        function line( key, value ) { lines.push( `| ${ escapeMarkdown( key ) } | \`${ escapeMarkdown( value ) }\` |` ) }
+        function escapeMarkdown( str: string ) { return str.replaceAll( /[\[\]\{\}\(\)\<\>\|\#\+\-\.\!\`\*\_\\]/g, "\\$&" ) }
+
+        for ( let i = 0; i < match.length; i++ )
+            line( `$${ i === 0 ? "&" : i }`, match[ i ] )
+
+        if ( match.groups )
+            for ( let [ key, val ] of Object.entries( match.groups ) )
+                line( `$<${ key }>`, val )
+
+        return `|group|text|\n|:-|:-|\n${ lines.join( "\n" ) }`
+    }
 
     function matchRange( match: RegExpMatchArray ) {
         const start = match.index ?? 0

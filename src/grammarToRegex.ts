@@ -1,6 +1,5 @@
 import { MergeIntersection } from "./utils/types.js"
 import { escapeRegExp } from "./utils/stringUtils.js"
-import { stringifyAST } from "./utils/stringifyAST.js"
 
 type LocationPart = { offset: number, column: number, line: number }
 type Location = { start: LocationPart, end: LocationPart }
