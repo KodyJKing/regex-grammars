@@ -175,7 +175,7 @@ function OptionsInput( { flags, setFlags, conversionOptions, setConversionOption
         style={{ margin: "1px 0px 0px 0px", gap: "4px", fontSize: "12px" }}
     >
         <label className="no-select">Flags:</label>
-        <Input value={flags} setValue={setFlags} pattern={/^(?:([gimsuy])(?!.*\1))*$/} />
+        <Input value={flags} setValue={setFlags} pattern={/^(?:([gmiyuvsd])(?!.*\1))*$/} />
         <CheckBox
             label="Always use capture groups"
             title="Replaces non-capture groups with capture groups to reduce size."
@@ -263,6 +263,8 @@ function updateSearch( state: DecorationsState, model: monaco.editor.ITextModel,
     const matches = regex.global
         ? Array.from( modelText.matchAll( regex ) )
         : [ modelText.match( regex ) ].filter( m => m ) as [ RegExpMatchArray ]
+
+    console.log( matches )
 
     state.decorations = model.deltaDecorations(
         state.decorations,
