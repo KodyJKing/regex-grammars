@@ -2,7 +2,9 @@
     display: flex;
     flex-direction: var(--axis);
     align-items: stretch;
+    overflow: hidden;
 
+    /* Always defined in JS, just here for reference */
     --min-size: 10%;
 }
 
@@ -46,7 +48,17 @@
     display: flex;
     flex-direction: var(--axis);
     align-items: stretch;
+    justify-content: stretch;
 
+    min-height: var(--min-size);
+    min-width: var(--min-size);
+}
+
+/* Style the user provided elements... */
+.Pane > *:first-child {
+    /* Make sure user element fills the pane... */
+    flex: 1;
+    /* and can shrink down to the expected amount. */
     min-height: var(--min-size);
     min-width: var(--min-size);
 }
@@ -70,5 +82,5 @@
 
 .DragHandleIndicator {
     flex-basis: 2px;
-    background-color: white;
+    background-color: var(--SplitPane-dragHandleColor);
 }

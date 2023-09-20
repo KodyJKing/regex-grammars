@@ -23,7 +23,7 @@ export function Input(
         pattern={pattern?.source}
         value={value}
         onChange={e => checkAndSetValue( e.currentTarget )}
-        style={{ flex: "1 1 auto", backgroundColor: "inherit", ...{ style } }}
+        style={{ flex: "1 1 auto", backgroundColor: "inherit", ...style }}
         {...rest}
     />
 }

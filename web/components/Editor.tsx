@@ -1,15 +1,15 @@
-import React, { useRef, useState, useEffect, useMemo } from 'react'
+import React, { useRef, useState, useEffect, useMemo, CSSProperties } from 'react'
 import * as monaco from "monaco-editor"
 import { PegexLanguageName } from '../language/pegex.js'
 import { parseGrammarToRegexSource } from '../../src/index.js'
 import debounce from '../utils/debounce.js'
 import { EditorType, MonacoEditor } from './MonacoEditor.js'
-import { Resizable } from './Resizable.js'
 import { useIsLandscape } from '../hooks/useSize.js'
 import { CheckBox } from './CheckBox.js'
 import { ConversionOptions } from '../grammarToRegex.js'
 import { Input } from './Input.js'
 import { parseFunction } from '../utils/utils.js'
+import { SplitPane } from './SplitPane.js'
 
 type DecorationsState = { decorations: string[] }
 
@@ -18,10 +18,6 @@ const editorSettings: monaco.editor.IStandaloneEditorConstructionOptions = {
     automaticLayout: true,
     minimap: { enabled: false },
     overviewRulerBorder: false,
-}
-
-const editorStyle: React.CSSProperties = {
-    flex: "1 1 200px", minWidth: "400px", minHeight: "200px"
 }
 
 export function Editor( props: { grammarSource, sampleText, replacementPattern } ) {
@@ -42,9 +38,6 @@ export function Editor( props: { grammarSource, sampleText, replacementPattern }
     const [ jsReplacer, setJsReplacer ] = useState( true )
 
     const decorationsState = useMemo<DecorationsState>( () => { return { decorations: [] } }, [] )
-
-    const ref = useRef<HTMLDivElement>( null )
-    const landscape = useIsLandscape( ref )
 
     // Compile grammar
     useEffect( () => {
@@ -85,73 +78,63 @@ export function Editor( props: { grammarSource, sampleText, replacementPattern }
         }
     }, [ regexSource, sampleText, replacementPattern, jsReplacer, flags ] )
 
-    return <div ref={ref} className="fill flex-column">
+    return <div
+        className="fill flex-column"
+        style={{ "--SplitPane-dragHandleColor": "#425fff" } as CSSProperties}
+    >
 
         <OutputBar {...{ error, regexSource, flags }} />
 
-        <div className="flex-long-axis" style={{ flex: "1 1 auto", gap: "1px 1px", maxHeight: "calc(100% - 40px)" }} >
-
-            {/* Primary pane */}
-            <div className="flex-column" style={{ flex: "1 1 200px", minWidth: "400px", minHeight: "200px" }}>
-
+        <SplitPane
+            className="flex-fill"
+            direction="long"
+            style={{ gap: ".5px .5px", justifyContent: "space-between" }}
+        >
+            {/* Grammar */}
+            <div className="flex-column">
                 <OptionsInput {...{
                     flags, setFlags,
                     conversionOptions,
                     setConversionOptions
                 }} />
-
-                {/* Grammar editor */}
                 <MonacoEditor
-                    style={editorStyle}
-                    onEditor={setGrammarEditor}
-                    onChanged={setGrammarSource}
+                    style={{ minHeight: "inherit", minWidth: "inherit" }}
+                    className="flex-fill"
+                    onEditor={setGrammarEditor} onChanged={setGrammarSource}
                     options={{ value: props.grammarSource, language: PegexLanguageName, ...editorSettings }}
                 />
-
             </div>
 
-            {/* Secondary pane */}
-            <Resizable flex
-                style={{ alignSelf: "stretch", flex: "1", gap: "1px 1px" }}
-                className="flex-short-axis"
-                left={landscape} top={!landscape}
-                minWidth={25} minHeight={25}
+            {/* Search and substitution pane */}
+            <SplitPane
+                className="flex-fill"
+                direction="short"
+                style={{ gap: ".5px .5px", justifyContent: "space-between" }}
             >
-
-                {/* Test input editor */}
                 <MonacoEditor
-                    style={editorStyle}
-                    onChanged={setSampleText}
-                    onEditor={setTextEditor}
+                    onChanged={setSampleText} onEditor={setTextEditor}
                     options={{
                         value: props.sampleText, renderWhitespace: "all",
                         language: "plaintext", ...editorSettings
                     }}
                 />
-
-                <Resizable flex
-                    className="flex-column bg-gray-2"
-                    style={{ alignSelf: "stretch", flex: "1" }}
-                    left={!landscape} top={landscape}
-                    minWidth={25} minHeight={25}
-                >
+                <div className="flex-column">
                     <PatternInput
                         patternState={[ replacementPattern, setReplacementPattern ]}
                         jsState={[ jsReplacer, setJsReplacer ]}
                     />
-                    {/* Replacement editor */}
                     <MonacoEditor
-                        style={editorStyle}
+                        className="flex-fill"
                         onEditor={setReplacementTextEditor}
                         options={{
                             value: "", readOnly: true, renderWhitespace: "all",
                             language: "plaintext", ...editorSettings
                         }}
                     />
-                </Resizable>
+                </div>
+            </SplitPane>
 
-            </Resizable>
-        </div>
+        </SplitPane>
 
     </div>
 }
@@ -174,7 +157,7 @@ function OptionsInput( { flags, setFlags, conversionOptions, setConversionOption
         style={{ margin: "1px 0px 0px 0px", gap: "4px", fontSize: "12px" }}
     >
         <label className="no-select">Flags:</label>
-        <Input value={flags} setValue={setFlags} pattern={/^(?:([gmiyuvsd])(?!.*\1))*$/} />
+        <Input className="flex-fill" style={{ minWidth: 0, minHeight: 0 }} value={flags} setValue={setFlags} pattern={/^(?:([gmiyuvsd])(?!.*\1))*$/} />
         <CheckBox
             label="Always use capture groups"
             title="Replaces non-capture groups with capture groups to reduce size."
