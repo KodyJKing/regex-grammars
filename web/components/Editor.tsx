@@ -78,17 +78,12 @@ export function Editor( props: { grammarSource, sampleText, replacementPattern }
         }
     }, [ regexSource, sampleText, replacementPattern, jsReplacer, flags ] )
 
-    return <div
-        className="fill flex-column"
-        style={{ "--SplitPane-dragHandleColor": "#425fff" } as CSSProperties}
-    >
-
+    return <div className="fill flex-column" >
         <OutputBar {...{ error, regexSource, flags }} />
 
         <SplitPane
-            className="flex-fill"
+            className="flex-fill gap-xs justify-content-space-between"
             direction="long"
-            style={{ gap: ".5px .5px", justifyContent: "space-between" }}
         >
             {/* Grammar */}
             <div className="flex-column">
@@ -98,8 +93,7 @@ export function Editor( props: { grammarSource, sampleText, replacementPattern }
                     setConversionOptions
                 }} />
                 <MonacoEditor
-                    style={{ minHeight: "inherit", minWidth: "inherit" }}
-                    className="flex-fill"
+                    className="flex-fill no-min-size"
                     onEditor={setGrammarEditor} onChanged={setGrammarSource}
                     options={{ value: props.grammarSource, language: PegexLanguageName, ...editorSettings }}
                 />
@@ -107,9 +101,8 @@ export function Editor( props: { grammarSource, sampleText, replacementPattern }
 
             {/* Search and substitution pane */}
             <SplitPane
-                className="flex-fill"
+                className="flex-fill gap-xs justify-content-space-between"
                 direction="short"
-                style={{ gap: ".5px .5px", justifyContent: "space-between" }}
             >
                 <MonacoEditor
                     onChanged={setSampleText} onEditor={setTextEditor}
@@ -141,10 +134,11 @@ export function Editor( props: { grammarSource, sampleText, replacementPattern }
 
 function OutputBar( { error, regexSource, flags } ) {
     return <div
-        className="flex-column align-center bg-gray-1 pad-m center-text"
+        className="flex-column align-center bg-gray-1 pad-m center-text justify-content-center"
         style={{
-            flex: "0 0 40px", userSelect: error ? "initial" : "all", justifyContent: "center",
-            color: error ? "var(--color-error)" : undefined
+            color: error ? "var(--color-error)" : undefined,
+            userSelect: error ? "initial" : "all",
+            flex: "0 0 40px"
         }}
     >
         {error ?? `/${ regexSource }/${ flags }`}
@@ -154,10 +148,14 @@ function OutputBar( { error, regexSource, flags } ) {
 function OptionsInput( { flags, setFlags, conversionOptions, setConversionOptions } ) {
     return <div
         className="flex-row flex-center bg-gray-1 pad-m"
-        style={{ margin: "1px 0px 0px 0px", gap: "4px", fontSize: "12px" }}
+        style={{ marginTop: "1px", fontSize: "12px" }}
     >
         <label className="no-select">Flags:</label>
-        <Input className="flex-fill" style={{ minWidth: 0, minHeight: 0 }} value={flags} setValue={setFlags} pattern={/^(?:([gmiyuvsd])(?!.*\1))*$/} />
+        <Input
+            className="flex-fill no-min-size"
+            value={flags} setValue={setFlags}
+            pattern={/^(?:([gmiyuvsd])(?!.*\1))*$/}
+        />
         <CheckBox
             label="Always use capture groups"
             title="Replaces non-capture groups with capture groups to reduce size."
