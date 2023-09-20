@@ -12,7 +12,7 @@ window.addEventListener( "beforeunload", e => {
 const root = createRoot( document.getElementById( "root" ) as HTMLElement )
 
 root.render( <div className="fill">
-    <SplitPane className="fill">
+    <SplitPane direction="long" minSize={.3} className="fill">
         <Pane color="red"/>
         <Pane color="green"/>
         <Pane color="blue"/>

@@ -1,28 +1,48 @@
 import React, { CSSProperties, HTMLAttributes, ReactNode, useRef, useMemo, useEffect } from "react"
 
 import classes from "./SplitPane.module.css"
+const directionToClass = { row: classes.AxisRow, column: classes.AxisColumn, long: classes.AxisLong, short: classes.AxisShort }
 
 type Axis = "x" | "y"
+
+type Direction =
+    | "row"
+    | "column"
+    | "long"
+    | "short"
 
 type Properties =
     & HTMLAttributes<HTMLDivElement>
     & {
+        /** The flex-direction to split along. The options `long` and `short` use the longest and shortest directions depending on viewport orientation. */
+        direction?: Direction,
+        /** The minimum fraction of the container a pane can take. */
+        minSize?: number
     }
 
 export function SplitPane( props: Properties ) {
-    const { children: _children, style, className, ...rest } = props
+    const {
+        children: _children,
+        direction = "row",
+        style, className,
+        minSize = 0.1,
+        ...rest
+    } = props
+
     const children = _children instanceof Array ? _children : [ _children ]
     const childCount = children.length
 
     const rootRef = useRef<HTMLDivElement>( null )
-    const controller = useMemo( () => new SplitPlaneController( rootRef, childCount ), [] )
+    const controller = useMemo( () => new SplitPaneController( rootRef, childCount, minSize ), [] )
 
     useEffect( () => controller.applyStyle(), [ rootRef.current, childCount ] )
 
+    const axisClass = directionToClass[ direction ]
+
     return <div
-        className={[ className, classes.SplitPane, classes.AxisShort ].join( " " )}
+        className={[ className, classes.SplitPane, axisClass ].join( " " )}
         ref={rootRef} {...rest}
-        style={{ ...style } as CSSProperties}
+        style={{ "--min-size": `${ minSize * 100 }%`, ...style } as CSSProperties}
     >
         {children.map(
             ( child, index ) =>
@@ -32,7 +52,7 @@ export function SplitPane( props: Properties ) {
                 >
                     {child}
                     {
-                        !isFinal( index ) && <div
+                        !isFinalChild( index ) && <div
                             className={classes.DragHandle}
                             onPointerDown={e => controller.onPointerDown( index, e )}
                             onPointerUp={e => controller.onPointerUp( index, e )}
@@ -45,19 +65,21 @@ export function SplitPane( props: Properties ) {
         )}
     </div>
 
-    function isFinal( index ) { return index >= childCount - 1 }
+    function isFinalChild( index ) { return index >= childCount - 1 }
 }
 
-class SplitPlaneController {
+class SplitPaneController {
 
     constructor(
         public rootRef: React.RefObject<HTMLDivElement>,
         public childCount: number,
-        public sizes = new Array<number>( childCount ).fill( 1 / childCount ),
-        public activePointer: number | null = null,
-        public initialOffset: number = 0,
-        public minSize = 0.1
-    ) { }
+        public minSize
+    ) {
+        this.sizes = new Array<number>( childCount ).fill( 1 / childCount )
+    }
+    public sizes: number[]
+    public activePointer: number | null = null
+    public initialMouseOffset: number = 0
 
     isDragging() { return this.activePointer !== null }
     root() { return this.rootRef.current }
@@ -77,7 +99,7 @@ class SplitPlaneController {
         const panes = root.querySelectorAll( `.${ classes.Pane }` ) as NodeListOf<HTMLElement>
 
         panes.forEach( ( child, index ) => {
-            child.style.flexBasis = this.sizes[ index ] * 100 + "%"
+            child.style.flexBasis = `${ this.sizes[ index ] * 100 }%`
         } )
     }
 
@@ -114,7 +136,7 @@ class SplitPlaneController {
             return
         this.activePointer = e.pointerId
         e.currentTarget.setPointerCapture( e.pointerId )
-        this.initialOffset = this.offset( e )
+        this.initialMouseOffset = this.mouseOffset( e )
     }
 
     onPointerUp( index: number, e: React.PointerEvent ) {
@@ -123,21 +145,21 @@ class SplitPlaneController {
 
     onPointerMove( index: number, e: React.PointerEvent ) {
         if ( this.isDragging() ) {
-            const offset = this.offset( e )
-            const deltaOffset = offset - this.initialOffset
+            const offset = this.mouseOffset( e )
+            const deltaOffset = offset - this.initialMouseOffset
             this.resize( index, deltaOffset )
         }
     }
 
-    offset( e: React.PointerEvent ) {
+    mouseOffset( e: React.PointerEvent ) {
         const axis = this.flexAxis()
         if ( !axis ) return 0
-        return getOffset( axis, e )
+        return mouseOffset( axis, e )
     }
 
 }
 
-function getOffset( axis: Axis, e: React.PointerEvent ) {
+function mouseOffset( axis: Axis, e: React.PointerEvent ) {
     if ( axis === "x" )
         return e.clientX - e.currentTarget.getBoundingClientRect().left
     return e.clientY - e.currentTarget.getBoundingClientRect().top
