@@ -260,8 +260,9 @@ function updateSearch( state: DecorationsState, model: monaco.editor.ITextModel,
     function getMatchTable( match: RegExpMatchArray ) {
         let lines: string[] = []
 
-        function line( key, value ) { lines.push( `| ${ escapeMarkdown( key ) } | \`${ escapeMarkdown( value ) }\` |` ) }
+        function line( key, value ) { lines.push( `| ${ escapeMarkdown( key ) } |    \`\` ${ escapeMarkdownQuote( value ) } \`\` |` ) }
         function escapeMarkdown( str: string ) { return str.replaceAll( /[\[\]\{\}\(\)\<\>\|\#\+\-\.\!\`\*\_\\]/g, "\\$&" ) }
+        function escapeMarkdownQuote( str: string ) { return str.replaceAll( /[\|]/g, "\\$&" ) }
 
         for ( let i = 0; i < match.length; i++ )
             line( `$${ i === 0 ? "&" : i }`, match[ i ] )
