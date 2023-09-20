@@ -1,6 +1,8 @@
-import React, { CSSProperties, HTMLAttributes, ReactNode, useRef, useMemo } from "react"
+import React, { CSSProperties, HTMLAttributes, ReactNode, useRef, useMemo, useEffect } from "react"
 
 import classes from "./SplitPane.module.css"
+
+type Axis = "x" | "y"
 
 type Properties =
     & HTMLAttributes<HTMLDivElement>
@@ -8,67 +10,45 @@ type Properties =
     }
 
 export function SplitPane( props: Properties ) {
-    const { children: _children, style, ...rest } = props
-
+    const { children: _children, style, className, ...rest } = props
     const children = _children instanceof Array ? _children : [ _children ]
     const childCount = children.length
 
     const rootRef = useRef<HTMLDivElement>( null )
-    const controller = useMemo( () => new Controller( rootRef, childCount ), [] )
+    const controller = useMemo( () => new SplitPlaneController( rootRef, childCount ), [] )
 
-    function isFinal( index ) { return index >= childCount - 1 }
+    useEffect( () => controller.applyStyle(), [ rootRef.current, childCount ] )
 
     return <div
+        className={[ className, classes.SplitPane, classes.AxisShort ].join( " " )}
         ref={rootRef} {...rest}
-        style={{
-            ...style,
-            display: "grid",
-            gridTemplateColumns: controller.gridTemplateColumns(),
-        }}
+        style={{ ...style } as CSSProperties}
     >
         {children.map(
             ( child, index ) =>
-                // Pane
-                <div key={index}
-                    style={{
-                        width: "100%", height: "100%",
-                        position: "relative",
-                        overflow: "hidden"
-                    }}
+                <div
+                    className={classes.Pane}
+                    key={index}
                 >
                     {child}
-                    {/* DragHandle */}
-                    {!isFinal( index ) && <div
-                        className={classes.DragHandle}
-                        style={{
-                            position: "absolute", right: "0", top: "0",
-                            height: "100%", width: "20px",
-                            transform: "translateX(50%)",
-                            cursor: "col-resize",
-                            zIndex: "1"
-                        }}
-                        onPointerDown={e => controller.onPointerDown( index, e )}
-                        onPointerUp={e => controller.onPointerUp( index, e )}
-                        onPointerMove={e => controller.onPointerMove( index, e )}
-                    >
-                        {/* DragHandleIndicator */}
-                        <div
-                            style={{
-                                height: "100%", width: "2px",
-                                position: "absolute", left: "50%",
-                                transform: "translateX(-50%)",
-                                backgroundColor: "white",
-                            }}
-                        />
-                    </div>}
-
+                    {
+                        !isFinal( index ) && <div
+                            className={classes.DragHandle}
+                            onPointerDown={e => controller.onPointerDown( index, e )}
+                            onPointerUp={e => controller.onPointerUp( index, e )}
+                            onPointerMove={e => controller.onPointerMove( index, e )}
+                        >
+                            <div className={classes.DragHandleIndicator} />
+                        </div>
+                    }
                 </div>
         )}
     </div>
 
+    function isFinal( index ) { return index >= childCount - 1 }
 }
 
-class Controller {
+class SplitPlaneController {
 
     constructor(
         public rootRef: React.RefObject<HTMLDivElement>,
@@ -80,13 +60,25 @@ class Controller {
     ) { }
 
     isDragging() { return this.activePointer !== null }
+    root() { return this.rootRef.current }
+    rootRect() { return this.rootRef.current?.getBoundingClientRect() }
 
-    gridTemplateColumns() {
-        return this.sizes.map( size => `${ size * 100 }%` ).join( " " )
+    flexAxis() {
+        const root = this.root()
+        if ( !root ) return
+        return getComputedStyle( root ).getPropertyValue( "flex-direction" ) === "row" ? "x" : "y"
     }
 
-    rootRect() {
-        return this.rootRef.current?.getBoundingClientRect()
+    applyStyle() {
+        const root = this.root()
+        if ( !root )
+            return
+
+        const panes = root.querySelectorAll( `.${ classes.Pane }` ) as NodeListOf<HTMLElement>
+
+        panes.forEach( ( child, index ) => {
+            child.style.flexBasis = this.sizes[ index ] * 100 + "%"
+        } )
     }
 
     resize( index: number, deltaPixels: number ) {
@@ -114,7 +106,7 @@ class Controller {
         this.sizes[ i ] += deltaPercent
         this.sizes[ j ] -= deltaPercent
 
-        root.style.gridTemplateColumns = this.gridTemplateColumns()
+        this.applyStyle()
     }
 
     onPointerDown( index: number, e: React.PointerEvent ) {
@@ -122,7 +114,7 @@ class Controller {
             return
         this.activePointer = e.pointerId
         e.currentTarget.setPointerCapture( e.pointerId )
-        this.initialOffset = e.clientX - e.currentTarget.getBoundingClientRect().left
+        this.initialOffset = this.offset( e )
     }
 
     onPointerUp( index: number, e: React.PointerEvent ) {
@@ -131,12 +123,24 @@ class Controller {
 
     onPointerMove( index: number, e: React.PointerEvent ) {
         if ( this.isDragging() ) {
-            const offset = e.clientX - e.currentTarget.getBoundingClientRect().left
+            const offset = this.offset( e )
             const deltaOffset = offset - this.initialOffset
             this.resize( index, deltaOffset )
         }
     }
 
+    offset( e: React.PointerEvent ) {
+        const axis = this.flexAxis()
+        if ( !axis ) return 0
+        return getOffset( axis, e )
+    }
+
+}
+
+function getOffset( axis: Axis, e: React.PointerEvent ) {
+    if ( axis === "x" )
+        return e.clientX - e.currentTarget.getBoundingClientRect().left
+    return e.clientY - e.currentTarget.getBoundingClientRect().top
 }
 
 function minMagnitude( a: number, b: number ) {

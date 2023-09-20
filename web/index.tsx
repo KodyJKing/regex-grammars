@@ -14,13 +14,13 @@ const root = createRoot( document.getElementById( "root" ) as HTMLElement )
 root.render( <div className="fill">
     <SplitPane className="fill">
         <Pane color="red"/>
-        <Pane color="blue"/>
         <Pane color="green"/>
+        <Pane color="blue"/>
     </SplitPane>
 </div> )
 
 function Pane({color}) {
-    return <div className="fill" style={{backgroundColor: color, position: "relative", overflow: "auto" }}>
+    return <div className="fill" style={{backgroundColor: color, position: "relative" }}>
         <div style={{ position: "absolute", backgroundColor: "black", top: 0, left: 0 }}>UL</div>
         <div style={{ position: "absolute", backgroundColor: "gray", top: 0, right: 0 }}>UR</div>
         <div style={{ position: "absolute", backgroundColor: "black", bottom: 0, left: 0 }}>BL</div>
