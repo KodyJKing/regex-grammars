@@ -280,7 +280,10 @@ function updateSearch( state: DecorationsState, model: monaco.editor.ITextModel,
         let lines: string[] = []
 
         function line( key, value ) { lines.push( `| ${ escapeMarkdown( key ) } | \`${ escapeMarkdown( value ) }\` |` ) }
-        function escapeMarkdown( str: string ) { return str.replaceAll( /[\[\]\{\}\(\)\<\>\|\#\+\-\.\!\`\*\_\\]/g, "\\$&" ) }
+        function escapeMarkdown( str: string ) {
+            if ( !str ) return str
+            return str.replaceAll( /[\[\]\{\}\(\)\<\>\|\#\+\-\.\!\`\*\_\\]/g, "\\$&" )
+        }
 
         for ( let i = 0; i < match.length; i++ )
             line( `$${ i === 0 ? "&" : i }`, match[ i ] )
