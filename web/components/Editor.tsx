@@ -57,7 +57,7 @@ export function Editor( props: { grammarSource, sampleText, replacementPattern }
         if ( sampleTextEditor ) {
             const model = sampleTextEditor.getModel()
             if ( model )
-                updateSearch( decorationsState, model, regexSource, flags )
+                updateSearch( decorationsState, model, regexSource, flags, setError )
         }
     }, [ regexSource, sampleText, flags ] )
 
@@ -249,7 +249,13 @@ const compileDebounced = debounce(
     }
 )
 
-function updateSearch( state: DecorationsState, model: monaco.editor.ITextModel, regexSource: string | undefined, flags: string ) {
+function updateSearch(
+    state: DecorationsState,
+    model: monaco.editor.ITextModel,
+    regexSource: string | undefined,
+    flags: string,
+    setError: ( output: any ) => void
+) {
     if ( !regexSource ) {
         state.decorations = model.deltaDecorations( state.decorations, [] )
         return
@@ -258,7 +264,15 @@ function updateSearch( state: DecorationsState, model: monaco.editor.ITextModel,
     const classNames = [ "highlighted-text-1", "highlighted-text-2" ]
 
     const modelText = model.getValue()
-    const regex = new RegExp( regexSource, flags )
+
+    let regex: RegExp
+    try {
+        regex = new RegExp( regexSource, flags )
+    } catch ( e ) {
+        setError( e.toString() )
+        return
+    }
+
     const matches = regex.global
         ? Array.from( modelText.matchAll( regex ) )
         : [ modelText.match( regex ) ].filter( m => m ) as [ RegExpMatchArray ]
