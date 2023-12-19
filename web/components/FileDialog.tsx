@@ -73,13 +73,12 @@ export function SaveDialog<V>( props: {
     }
 
     return <ModalBackdrop onClickOutside={props.close} onEscape={props.close}>
-        <div className={`${ classes.FileDialog }`}>
+        <div className={classes.FileDialog}>
             <div className="font-l">Save</div>
-
-            <div className={`${ classes.FileDialogList }`}>
-                {fileNames.map( ( name ) => <FileEntry key={name} name={name} inputName={inputName} onClick={setInputName} /> )}
-            </div>
-
+            <DialogList fileNames={fileNames} inputName={inputName} onClick={setInputName} onDoubleClick={() => {
+                setInputName( inputName )
+                onSubmit()
+            }} />
             <DialogForm submitText="Save" onSubmit={onSubmit} dialogState={dialogState} />
         </div>
     </ModalBackdrop>
@@ -101,20 +100,31 @@ export function LoadDialog<V>( props: {
     }
 
     return <ModalBackdrop onClickOutside={props.close} onEscape={props.close}>
-        <div className={`${ classes.FileDialog }`}>
-            <div className="font-l">Load</div>
-
-            <div className={`${ classes.FileDialogList }`}>
-                {fileNames.map( ( name ) => <FileEntry
-                    key={name} name={name} inputName={inputName}
-                    onClick={setInputName}
-                    onDoubleClick={loadFile}
-                /> )}
-            </div>
-
+        <div className={classes.FileDialog}>
+            <div className="font-m">Load</div>
+            <DialogList fileNames={fileNames} inputName={inputName} onClick={setInputName} onDoubleClick={loadFile} />
             <DialogForm submitText="Load" onSubmit={() => loadFile( inputName )} dialogState={dialogState} />
         </div>
     </ModalBackdrop>
+}
+
+function DialogList( props: {
+    fileNames: string[],
+    inputName: string,
+    onClick: ( name: string ) => void,
+    onDoubleClick: ( name: string ) => void
+} ) {
+    return <div className={classes.FileDialogListOuter}>
+        <div className={classes.FileDialogList}>
+            {props.fileNames.map( ( name ) => <FileEntry
+                key={name}
+                name={name}
+                inputName={props.inputName}
+                onClick={props.onClick}
+                onDoubleClick={props.onDoubleClick}
+            /> )}
+        </div>
+    </div>
 }
 
 function DialogForm( props: {
@@ -152,9 +162,6 @@ function FileEntry( props: {
     const partialMatch = inputName.length > 0 && name.startsWith( inputName )
     const fullmatch = inputName === name
     const rest = partialMatch ? name.slice( inputName.length ) : name
-    const classNames: string[] = [ "font-bold" ]
-    if ( fullmatch )
-        classNames.push( "font-color-info" )
 
     useEffect( () => {
         if ( fullmatch && ref.current )
@@ -165,8 +172,9 @@ function FileEntry( props: {
         ref={ref}
         onClick={() => onClick( name )}
         onDoubleClick={() => props.onDoubleClick?.( name )}
+        className={fullmatch ? "selected" : ""}
     >
-        {partialMatch && <span className={classNames.join( " " )}>{inputName}</span>}
+        {partialMatch && <span className="bold-font">{inputName}</span>}
         <span>{rest}</span>
     </div>
 }

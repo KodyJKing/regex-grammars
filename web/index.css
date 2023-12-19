@@ -41,6 +41,7 @@ input {
   font-family: Consolas, "Courier New", monospace;
   border: none;
   outline: none;
+  border-radius: 4px;
 }
 
 button {
@@ -48,6 +49,7 @@ button {
   border: none;
   outline: none;
   cursor: pointer;
+  border-radius: 4px;
 }
 
 #root {
@@ -127,6 +129,8 @@ button {
 
 .flex-center { align-items: center; }
 .flex-center-self { align-self: center; }
+
+.overflow-hidden { overflow: hidden; }
 
 .bg-gray-0 { background-color: var(--color-gray-0); }
 .bg-gray-1 { background-color: var(--color-gray-1); }

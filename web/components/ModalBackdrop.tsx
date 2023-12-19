@@ -19,13 +19,22 @@ export function ModalBackdrop( props: {
     return createPortal(
         <div className="modal-backdrop"
             style={{
+                // Cover the entire screen
                 position: "fixed",
-                top: 0,
-                left: 0,
-                width: "100vw",
-                height: "100vh",
-                backgroundColor: "rgba(0,0,0,0.5)",
+                top: 0, left: 0,
+                width: "100vw", height: "100vh",
                 zIndex: 100,
+
+                // 3x3 grid
+                display: "grid",
+                gridTemplateColumns: "1fr auto 1fr",
+                gridTemplateRows: "1fr auto 1fr",
+
+                // Center the modal
+                justifyItems: "center",
+                alignItems: "center",
+
+                backgroundColor: "rgba(0,0,0,0.5)",
             }}
             onClick={props.onClickOutside}
             onKeyDown={e => {
@@ -43,13 +52,8 @@ export function ModalBackdrop( props: {
                 }
             }}
         >
-            <div className="modal-backdrop__center"
-                style={{
-                    position: "absolute",
-                    top: "50%",
-                    left: "50%",
-                    transform: "translate(-50%, -50%)",
-                }}
+            <div className="modal-backdrop__center-area"
+                style={{ gridRow: 2, gridColumn: 2 }}
                 onClick={e => e.stopPropagation()}
             >
                 {props.children}

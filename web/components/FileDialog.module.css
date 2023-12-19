@@ -6,7 +6,7 @@
     justify-content: center;
     align-items: center;
     background-color: var(--color-gray-1);
-    /* border-radius: 10px; */
+    border-radius: 8px;
     box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.2);
     padding: 20px;
     box-sizing: border-box;
@@ -26,7 +26,7 @@
 
 .FileDialogInput > input {
     flex: 1 1 auto;
-    padding: 10px;
+    padding: 6px;
     box-sizing: border-box;
 }
 
@@ -42,11 +42,24 @@
     background-color: var(--color-gray-0);
 }
 
+.FileDialogListOuter {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-height: 300px;
+    height: 200px;
+    overflow: hidden;
+    box-sizing: border-box;
+    background-color: var(--color-gray-0);
+    border-radius: 4px;
+    border: 2px solid var(--color-gray-2);
+}
+
 /* Style FileDialogList items */
 .FileDialogList > * {
     display: flex;
     align-items: center;
-    padding: 10px;
+    padding: 8px;
     box-sizing: border-box;
     cursor: pointer;
 }
@@ -57,4 +70,9 @@
 }
 .FileDialogList > *:nth-child(even) {
     background-color: var(--color-gray-2);
+}
+
+/* Tint selected items towards var(--color-info) */
+.FileDialogList :global(.selected) {
+    background-color: var(--color-info);
 }
