@@ -1,3 +1,4 @@
+import { CachedStore } from "./CachedStore.js"
 import { Multimap } from "./Multimap.js"
 import { Store, Unwatcher } from "./Store.js"
 
@@ -75,3 +76,5 @@ export class LocalStore<V> implements Store<string, V> {
     }
 
 }
+
+export const defaultLocalStore = new CachedStore( new LocalStore<any>( "default" ) )

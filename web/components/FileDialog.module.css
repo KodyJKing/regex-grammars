@@ -26,7 +26,7 @@
 
 .FileDialogInput > input {
     flex: 1 1 auto;
-    padding: 6px;
+    padding: 4px 8px;
     box-sizing: border-box;
 }
 

@@ -15,8 +15,11 @@
   --color-error: var(--color-red-1);
   --color-danger: var(--color-red-1);
 
+  --color-green-1: #52ba49;
+
   --color-blue-1: #747bff;
-  --color-info: var(--color-blue-1);
+  
+  --color-info: var(--color-green-1);
 
   color-scheme: light dark;
   color: var(--color-white);
@@ -41,15 +44,18 @@ input {
   font-family: Consolas, "Courier New", monospace;
   border: none;
   outline: none;
-  border-radius: 4px;
+  border-radius: 8px;
 }
 
 button {
-  /* font-family: Consolas, "Courier New", monospace; */
+  font-family: Consolas, "Courier New", monospace;
   border: none;
   outline: none;
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: 8px;
+  font-weight: 600;
+  text-transform: uppercase;
+  padding: 8px 16px;
 }
 
 #root {

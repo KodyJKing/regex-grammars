@@ -11,7 +11,7 @@ import { ConversionOptions } from '../grammarToRegex.js'
 import { Input } from './Input.js'
 import { parseFunction } from '../utils/utils.js'
 import { LoadDialog, SaveDialog } from './FileDialog.js'
-import { LocalStore } from '../store/LocalStore.js'
+import { LocalStore, defaultLocalStore } from '../store/LocalStore.js'
 
 import classes from "./Editor.module.css"
 
@@ -29,36 +29,19 @@ const editorStyle: React.CSSProperties = {
 }
 
 // === File save/load ===
-type SaveFile = {
+export type SaveFile = {
     grammarSource: string,
     sampleText: string,
     replacementPattern: string,
     flags: string,
-    jsReplacer: boolean
+    jsReplacer: boolean,
+    conversionOptions: ConversionOptions
 }
-const autoSaveDebouncer = debouncer( 500 )
 const fileStore = new LocalStore<SaveFile>( "regex-grammar" )
-function save( name: string, file: SaveFile ) { fileStore.set( name, file ) }
-function autosaveDebounced( name: string, file: SaveFile ) {
-    const autoSaveName = `${ name }-autosave`
-    autoSaveDebouncer( () => {
-        const originalFile = JSON.stringify( fileStore.get( name ) )
-        const newFile = JSON.stringify( file )
-        if ( originalFile === newFile )
-            return // Don't save if nothing has changed
-        console.log( "Autosaving...", autoSaveName, file )
-        save( autoSaveName, file )
-    } )
-}
 // ======================
 
 export function Editor( props: { grammarSource, sampleText, replacementPattern } ) {
-    const fileName = useRef( "untitled" )
-    function setFileName( name: string ) {
-        if ( name.endsWith( "-autosave" ) )
-            name = name.replace( "-autosave", "" )
-        fileName.current = name
-    }
+    const [ fileName, setFileName ] = useState( "untitled" )
 
     const [ grammarSource, _setGrammarSource ] = useState<string>( "" )
     const [ grammarTextEditor, setGrammarEditor ] = useState<EditorType>()
@@ -93,7 +76,7 @@ export function Editor( props: { grammarSource, sampleText, replacementPattern }
     const landscape = useIsLandscape( ref )
 
     function getSaveFile(): SaveFile {
-        return { grammarSource, sampleText, replacementPattern, flags, jsReplacer }
+        return { grammarSource, sampleText, replacementPattern, flags, jsReplacer, conversionOptions }
     }
     function setFromSaveFile( file: SaveFile ) {
         setGrammarSource( file.grammarSource )
@@ -101,6 +84,7 @@ export function Editor( props: { grammarSource, sampleText, replacementPattern }
         setJsReplacer( file.jsReplacer ?? true )
         setFlags( file.flags ?? "gm" )
         setReplacementPattern( file.replacementPattern ?? "" )
+        setConversionOptions( file.conversionOptions ?? { noNonCaptureGroups: false } )
     }
 
     // Compile grammar
@@ -156,7 +140,7 @@ export function Editor( props: { grammarSource, sampleText, replacementPattern }
     >
 
         {saveDialogOpen && <SaveDialog
-            initialName={fileName.current}
+            initialName={fileName}
             getFileState={getSaveFile}
             onSaved={setFileName}
             store={fileStore}
@@ -172,6 +156,7 @@ export function Editor( props: { grammarSource, sampleText, replacementPattern }
         <MenuBar
             openSaveDialog={() => setSaveDialogOpen( true )}
             openLoadDialog={() => setLoadDialogOpen( true )}
+            fileName={fileName}
         />
 
         <OutputBar {...{ error, regexSource, flags }} />
@@ -191,10 +176,7 @@ export function Editor( props: { grammarSource, sampleText, replacementPattern }
                 <MonacoEditor
                     style={editorStyle}
                     onEditor={setGrammarEditor}
-                    onChanged={( source: string, editor: any ) => {
-                        _setGrammarSource( source )
-                        autosaveDebounced( fileName.current, getSaveFile() )
-                    }}
+                    onChanged={_setGrammarSource}
                     options={{ value: props.grammarSource, language: PegexLanguageName, ...editorSettings }}
                 />
 
@@ -249,11 +231,13 @@ export function Editor( props: { grammarSource, sampleText, replacementPattern }
 function MenuBar( props: {
     openSaveDialog: () => void,
     openLoadDialog: () => void,
+    fileName: string
 } ) {
     return <div className={classes.MenuBar} style={{
     }}>
-        <button style={{ background: "var(--color-gray-1)" }} onClick={props.openSaveDialog}>Save</button>
+        <button onClick={props.openSaveDialog}>Save</button>
         <button onClick={props.openLoadDialog}>Load</button>
+        <div className={classes.MenuBarTitle}>{props.fileName}</div>
     </div>
 }
 

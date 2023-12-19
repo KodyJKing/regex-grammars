@@ -36,7 +36,7 @@ export function ModalBackdrop( props: {
 
                 backgroundColor: "rgba(0,0,0,0.5)",
             }}
-            onClick={props.onClickOutside}
+            onMouseDown={props.onClickOutside}
             onKeyDown={e => {
                 if ( e.key === "Escape" ) {
                     props.onEscape?.()
@@ -54,7 +54,7 @@ export function ModalBackdrop( props: {
         >
             <div className="modal-backdrop__center-area"
                 style={{ gridRow: 2, gridColumn: 2 }}
-                onClick={e => e.stopPropagation()}
+                onMouseDown={e => e.stopPropagation()}
             >
                 {props.children}
             </div>

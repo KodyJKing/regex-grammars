@@ -9,21 +9,19 @@ import { useStoreKeys } from "../hooks/useStore.js"
 function useDialogState<V>(
     store: Store<string, V>,
     initialName: string,
-    filterAutoSave = false
 ) {
     const [ inputName, _setInputName ] = useState( initialName )
     const [ inputNamePreTab, setInputNamePreTab ] = useState<string>( initialName )
-
-    let fileNames = useStoreKeys( store )
-    if ( filterAutoSave )
-        fileNames = fileNames.filter( name => !name.endsWith( "-autosave" ) )
-
+    const fileNames = useStoreKeys( store )
     function setInputName( name: string ) {
         setInputNamePreTab( name )
         _setInputName( name )
     }
 
     function deleteFile() {
+        if ( !confirm( `Are you sure you want to delete ${ inputName }?` ) )
+            return
+
         store.set( inputName, undefined )
 
         // Select the next file
@@ -63,7 +61,7 @@ export function SaveDialog<V>( props: {
     close: () => void,
     initialName: string
 } ) {
-    const dialogState = useDialogState( props.store, props.initialName, true )
+    const dialogState = useDialogState( props.store, props.initialName )
     const { inputName, setInputName, fileNames } = dialogState
 
     function onSubmit() {
@@ -76,6 +74,8 @@ export function SaveDialog<V>( props: {
         <div className={classes.FileDialog}>
             <div className="font-l">Save</div>
             <DialogList fileNames={fileNames} inputName={inputName} onClick={setInputName} onDoubleClick={() => {
+                if ( !confirm( `Are you sure you want to overwrite ${ inputName }?` ) )
+                    return
                 setInputName( inputName )
                 onSubmit()
             }} />
@@ -90,7 +90,7 @@ export function LoadDialog<V>( props: {
     store: Store<string, V>,
     close: () => void
 } ) {
-    const dialogState = useDialogState( props.store, "", true )
+    const dialogState = useDialogState( props.store, "" )
     const { inputName, setInputName, fileNames } = dialogState
 
     function loadFile( name: string ) {
@@ -144,7 +144,7 @@ function DialogForm( props: {
             onSubmit()
         }}
     >
-        <input type="text" value={inputName} onChange={onChange} onKeyDown={tabComplete} autoFocus />
+        <input type="text" spellCheck={false} value={inputName} onChange={onChange} onKeyDown={tabComplete} autoFocus />
         <button onClick={onSubmit}>{props.submitText}</button>
         <button type="button" className="danger" onClick={deleteFile}>Delete</button>
     </form>
@@ -174,7 +174,7 @@ function FileEntry( props: {
         onDoubleClick={() => props.onDoubleClick?.( name )}
         className={fullmatch ? "selected" : ""}
     >
-        {partialMatch && <span className="bold-font">{inputName}</span>}
+        {partialMatch && <span className="font-bold">{inputName}</span>}
         <span>{rest}</span>
     </div>
 }

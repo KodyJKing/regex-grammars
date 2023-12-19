@@ -1,10 +1,20 @@
 import { Store } from "../store/Store.js"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 
-export function useStore<K, V>( store: Store<K, V>, key: K ): V | undefined {
-    const [ value, setValue ] = useState<V | undefined>( store.get( key ) )
+type State<V> = ReturnType<typeof useState<V>>
+
+export function useStore<K, V>( store: Store<K, V>, key: K, initialValue?: V ): State<V> {
+    const _initialValue = useMemo( () => store.get( key ) ?? initialValue, [] )
+
+    const [ value, setValue ] = useState<V | undefined>( _initialValue )
+
     useEffect( () => store.watch( key, setValue ), [ store, key ] )
-    return value
+
+    function _setValue( value: V | undefined ) {
+        store.set( key, value )
+    }
+
+    return [ value, _setValue ]
 }
 
 export function useStoreKeys<K, V>( store: Store<K, V> ): K[] {
