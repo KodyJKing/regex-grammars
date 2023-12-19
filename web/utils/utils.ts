@@ -5,3 +5,8 @@ export function parseFunction( source: string ): Function | undefined {
         return undefined
     return result
 }
+
+// A proper modulus function that works with negative numbers
+export function modulus( a: number, b: number ): number {
+    return ( ( a % b ) + b ) % b
+}

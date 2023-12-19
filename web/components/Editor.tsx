@@ -68,7 +68,7 @@ export function Editor( props: { grammarSource, sampleText, replacementPattern }
     const [ jsReplacer, setJsReplacer ] = useState( true )
 
     const [ saveDialogOpen, setSaveDialogOpen ] = useState( false )
-    const [ loadDialogOpen, setLoadDialogOpen ] = useState( false )
+    const [ loadDialogOpen, setLoadDialogOpen ] = useState( true )
 
     const decorationsState = useMemo<DecorationsState>( () => { return { decorations: [] } }, [] )
 

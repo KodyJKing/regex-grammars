@@ -17,18 +17,23 @@
 /* An name input and save/load button on one line */
 .FileDialogInput {
     display: flex;
-    gap: 4px;
+    gap: 2px;
     flex-direction: row;
     justify-content: center;
     align-items: stretch;
     width: 100%;
     box-sizing: border-box;
+    border-radius: 4px;
+    overflow: hidden;
 }
-
 .FileDialogInput > input {
     flex: 1 1 auto;
     padding: 4px 8px;
     box-sizing: border-box;
+    border-radius: 2px;
+}
+.FileDialogInput > button {
+    border-radius: 2px;
 }
 
 .FileDialogList {
@@ -53,7 +58,6 @@
     box-sizing: border-box;
     background-color: var(--color-gray-0);
     border-radius: 4px;
-    border: 2px solid var(--color-gray-2);
 }
 
 /* Style FileDialogList items */

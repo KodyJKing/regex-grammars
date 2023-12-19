@@ -5,6 +5,7 @@ import { Store } from "../store/Store.js"
 
 import classes from "./FileDialog.module.css"
 import { useStoreKeys } from "../hooks/useStore.js"
+import { modulus } from "../utils/utils.js"
 
 function useDialogState<V>(
     store: Store<string, V>,
@@ -42,8 +43,10 @@ function useDialogState<V>(
         e.preventDefault()
 
         let tabIndex = fileNames.indexOf( inputName )
+        const cycleDir = e.shiftKey ? -1 : 1
         for ( let i = 1; i <= fileNames.length; i++ ) {
-            const name = fileNames[ ( tabIndex + i ) % fileNames.length ]
+            const j = modulus( tabIndex + i * cycleDir, fileNames.length )
+            const name = fileNames[ j ]
             if ( name.startsWith( inputNamePreTab ) ) {
                 _setInputName( name )
                 return
