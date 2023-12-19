@@ -90,7 +90,7 @@ export function LoadDialog<V>( props: {
     store: Store<string, V>,
     close: () => void
 } ) {
-    const dialogState = useDialogState( props.store, "" )
+    const dialogState = useDialogState( props.store, "", true )
     const { inputName, setInputName, fileNames } = dialogState
 
     function loadFile( name: string ) {

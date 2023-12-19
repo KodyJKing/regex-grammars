@@ -29,7 +29,13 @@ const editorStyle: React.CSSProperties = {
 }
 
 // === File save/load ===
-type SaveFile = { grammarSource: string, sampleText: string, replacementPattern: string }
+type SaveFile = {
+    grammarSource: string,
+    sampleText: string,
+    replacementPattern: string,
+    flags: string,
+    jsReplacer: boolean
+}
 const autoSaveDebouncer = debouncer( 500 )
 const fileStore = new LocalStore<SaveFile>( "regex-grammar" )
 function save( name: string, file: SaveFile ) { fileStore.set( name, file ) }
@@ -58,6 +64,7 @@ export function Editor( props: { grammarSource, sampleText, replacementPattern }
     const [ grammarTextEditor, setGrammarEditor ] = useState<EditorType>()
     const [ conversionOptions, setConversionOptions ] = useState( { noNonCaptureGroups: false } )
     function setGrammarSource( source: string ) {
+        _setGrammarSource( source )
         grammarTextEditor?.setValue( source )
     }
 
@@ -69,15 +76,13 @@ export function Editor( props: { grammarSource, sampleText, replacementPattern }
     const [ sampleTextEditor, setTextEditor ] = useState<EditorType>()
     const [ sampleText, _setSampleText ] = useState( "" )
     function setSampleText( source: string ) {
+        _setSampleText( source )
         sampleTextEditor?.setValue( source )
     }
 
     const [ replacementTextEditor, setReplacementTextEditor ] = useState<EditorType>()
-    const [ replacementPattern, _setReplacementPattern ] = useState( props.replacementPattern )
+    const [ replacementPattern, setReplacementPattern ] = useState( props.replacementPattern )
     const [ jsReplacer, setJsReplacer ] = useState( true )
-    function setReplacementPattern( source: string ) {
-        replacementTextEditor?.setValue( source )
-    }
 
     const [ saveDialogOpen, setSaveDialogOpen ] = useState( false )
     const [ loadDialogOpen, setLoadDialogOpen ] = useState( false )
@@ -86,6 +91,17 @@ export function Editor( props: { grammarSource, sampleText, replacementPattern }
 
     const ref = useRef<HTMLDivElement>( null )
     const landscape = useIsLandscape( ref )
+
+    function getSaveFile(): SaveFile {
+        return { grammarSource, sampleText, replacementPattern, flags, jsReplacer }
+    }
+    function setFromSaveFile( file: SaveFile ) {
+        setGrammarSource( file.grammarSource )
+        setSampleText( file.sampleText )
+        setJsReplacer( file.jsReplacer ?? true )
+        setFlags( file.flags ?? "gm" )
+        setReplacementPattern( file.replacementPattern ?? "" )
+    }
 
     // Compile grammar
     useEffect( () => {
@@ -141,18 +157,14 @@ export function Editor( props: { grammarSource, sampleText, replacementPattern }
 
         {saveDialogOpen && <SaveDialog
             initialName={fileName.current}
-            getFileState={() => ( { grammarSource, sampleText, replacementPattern } )}
+            getFileState={getSaveFile}
             onSaved={setFileName}
             store={fileStore}
             close={() => setSaveDialogOpen( false )}
         />}
         {loadDialogOpen && <LoadDialog
             onLoaded={setFileName}
-            setFileState={( file: SaveFile ) => {
-                setGrammarSource( file.grammarSource )
-                setSampleText( file.sampleText )
-                setReplacementPattern( file.replacementPattern )
-            }}
+            setFileState={setFromSaveFile}
             store={fileStore}
             close={() => setLoadDialogOpen( false )}
         />}
@@ -181,7 +193,7 @@ export function Editor( props: { grammarSource, sampleText, replacementPattern }
                     onEditor={setGrammarEditor}
                     onChanged={( source: string, editor: any ) => {
                         _setGrammarSource( source )
-                        autosaveDebounced( fileName.current, { grammarSource: source, sampleText, replacementPattern } )
+                        autosaveDebounced( fileName.current, getSaveFile() )
                     }}
                     options={{ value: props.grammarSource, language: PegexLanguageName, ...editorSettings }}
                 />
@@ -214,7 +226,7 @@ export function Editor( props: { grammarSource, sampleText, replacementPattern }
                     minWidth={25} minHeight={25}
                 >
                     <PatternInput
-                        patternState={[ replacementPattern, _setReplacementPattern ]}
+                        patternState={[ replacementPattern, setReplacementPattern ]}
                         jsState={[ jsReplacer, setJsReplacer ]}
                     />
                     {/* Replacement editor */}
