@@ -11,6 +11,7 @@
     padding: 20px;
     box-sizing: border-box;
     overflow: hidden;
+    user-select: none;
 }
 
 /* An name input and save/load button on one line */
