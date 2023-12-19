@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect, useMemo } from 'react'
 import * as monaco from "monaco-editor"
 import { PegexLanguageName } from '../language/pegex.js'
 import { parseGrammarToRegexSource } from '../../src/index.js'
-import debounce from '../utils/debounce.js'
+import debounce, { debouncer } from '../utils/debounce.js'
 import { EditorType, MonacoEditor } from './MonacoEditor.js'
 import { Resizable } from './Resizable.js'
 import { useIsLandscape } from '../hooks/useSize.js'
@@ -10,6 +10,10 @@ import { CheckBox } from './CheckBox.js'
 import { ConversionOptions } from '../grammarToRegex.js'
 import { Input } from './Input.js'
 import { parseFunction } from '../utils/utils.js'
+import { LoadDialog, SaveDialog } from './FileDialog.js'
+import { LocalStore } from '../store/LocalStore.js'
+
+import classes from "./Editor.module.css"
 
 type DecorationsState = { decorations: string[] }
 
@@ -24,10 +28,38 @@ const editorStyle: React.CSSProperties = {
     flex: "1 1 200px", minWidth: "400px", minHeight: "200px"
 }
 
+// === File save/load ===
+type SaveFile = { grammarSource: string, sampleText: string, replacementPattern: string }
+const autoSaveDebouncer = debouncer( 500 )
+const fileStore = new LocalStore<SaveFile>( "regex-grammar" )
+function save( name: string, file: SaveFile ) { fileStore.set( name, file ) }
+function autosaveDebounced( name: string, file: SaveFile ) {
+    const autoSaveName = `${ name }-autosave`
+    autoSaveDebouncer( () => {
+        const originalFile = JSON.stringify( fileStore.get( name ) )
+        const newFile = JSON.stringify( file )
+        if ( originalFile === newFile )
+            return // Don't save if nothing has changed
+        console.log( "Autosaving...", autoSaveName, file )
+        save( autoSaveName, file )
+    } )
+}
+// ======================
+
 export function Editor( props: { grammarSource, sampleText, replacementPattern } ) {
-    const [ grammarSource, setGrammarSource ] = useState<string>( "" )
+    const fileName = useRef( "untitled" )
+    function setFileName( name: string ) {
+        if ( name.endsWith( "-autosave" ) )
+            name = name.replace( "-autosave", "" )
+        fileName.current = name
+    }
+
+    const [ grammarSource, _setGrammarSource ] = useState<string>( "" )
     const [ grammarTextEditor, setGrammarEditor ] = useState<EditorType>()
     const [ conversionOptions, setConversionOptions ] = useState( { noNonCaptureGroups: false } )
+    function setGrammarSource( source: string ) {
+        grammarTextEditor?.setValue( source )
+    }
 
     const [ flags, setFlags ] = useState( "gm" )
 
@@ -35,11 +67,20 @@ export function Editor( props: { grammarSource, sampleText, replacementPattern }
     const [ regexSource, setRegexSource ] = useState<string>()
 
     const [ sampleTextEditor, setTextEditor ] = useState<EditorType>()
-    const [ sampleText, setSampleText ] = useState( "" )
+    const [ sampleText, _setSampleText ] = useState( "" )
+    function setSampleText( source: string ) {
+        sampleTextEditor?.setValue( source )
+    }
 
     const [ replacementTextEditor, setReplacementTextEditor ] = useState<EditorType>()
-    const [ replacementPattern, setReplacementPattern ] = useState( props.replacementPattern )
+    const [ replacementPattern, _setReplacementPattern ] = useState( props.replacementPattern )
     const [ jsReplacer, setJsReplacer ] = useState( true )
+    function setReplacementPattern( source: string ) {
+        replacementTextEditor?.setValue( source )
+    }
+
+    const [ saveDialogOpen, setSaveDialogOpen ] = useState( false )
+    const [ loadDialogOpen, setLoadDialogOpen ] = useState( false )
 
     const decorationsState = useMemo<DecorationsState>( () => { return { decorations: [] } }, [] )
 
@@ -85,7 +126,41 @@ export function Editor( props: { grammarSource, sampleText, replacementPattern }
         }
     }, [ regexSource, sampleText, replacementPattern, jsReplacer, flags ] )
 
-    return <div ref={ref} className="fill flex-column">
+    return <div ref={ref} className="fill flex-column"
+        onKeyDown={e => {
+            if ( e.key === "s" && e.ctrlKey ) {
+                setSaveDialogOpen( true )
+                e.preventDefault()
+            }
+            if ( e.key === "o" && e.ctrlKey ) {
+                setLoadDialogOpen( true )
+                e.preventDefault()
+            }
+        }}
+    >
+
+        {saveDialogOpen && <SaveDialog
+            initialName={fileName.current}
+            getFileState={() => ( { grammarSource, sampleText, replacementPattern } )}
+            onSaved={setFileName}
+            store={fileStore}
+            close={() => setSaveDialogOpen( false )}
+        />}
+        {loadDialogOpen && <LoadDialog
+            onLoaded={setFileName}
+            setFileState={( file: SaveFile ) => {
+                setGrammarSource( file.grammarSource )
+                setSampleText( file.sampleText )
+                setReplacementPattern( file.replacementPattern )
+            }}
+            store={fileStore}
+            close={() => setLoadDialogOpen( false )}
+        />}
+
+        <MenuBar
+            openSaveDialog={() => setSaveDialogOpen( true )}
+            openLoadDialog={() => setLoadDialogOpen( true )}
+        />
 
         <OutputBar {...{ error, regexSource, flags }} />
 
@@ -104,7 +179,10 @@ export function Editor( props: { grammarSource, sampleText, replacementPattern }
                 <MonacoEditor
                     style={editorStyle}
                     onEditor={setGrammarEditor}
-                    onChanged={setGrammarSource}
+                    onChanged={( source: string, editor: any ) => {
+                        _setGrammarSource( source )
+                        autosaveDebounced( fileName.current, { grammarSource: source, sampleText, replacementPattern } )
+                    }}
                     options={{ value: props.grammarSource, language: PegexLanguageName, ...editorSettings }}
                 />
 
@@ -121,7 +199,7 @@ export function Editor( props: { grammarSource, sampleText, replacementPattern }
                 {/* Test input editor */}
                 <MonacoEditor
                     style={editorStyle}
-                    onChanged={setSampleText}
+                    onChanged={_setSampleText}
                     onEditor={setTextEditor}
                     options={{
                         value: props.sampleText, renderWhitespace: "all",
@@ -136,7 +214,7 @@ export function Editor( props: { grammarSource, sampleText, replacementPattern }
                     minWidth={25} minHeight={25}
                 >
                     <PatternInput
-                        patternState={[ replacementPattern, setReplacementPattern ]}
+                        patternState={[ replacementPattern, _setReplacementPattern ]}
                         jsState={[ jsReplacer, setJsReplacer ]}
                     />
                     {/* Replacement editor */}
@@ -153,6 +231,17 @@ export function Editor( props: { grammarSource, sampleText, replacementPattern }
             </Resizable>
         </div>
 
+    </div>
+}
+
+function MenuBar( props: {
+    openSaveDialog: () => void,
+    openLoadDialog: () => void,
+} ) {
+    return <div className={classes.MenuBar} style={{
+    }}>
+        <button style={{ background: "var(--color-gray-1)" }} onClick={props.openSaveDialog}>Save</button>
+        <button onClick={props.openLoadDialog}>Load</button>
     </div>
 }
 

@@ -9,3 +9,11 @@ export default function debounce<F extends Function>( millis: number, func: F ):
         }, millis )
     } ) as unknown as F
 }
+
+export function debouncer( millis: number ) {
+    const genericDebounce = debounce(
+        millis,
+        arg => arg()
+    )
+    return ( func: () => void ) => genericDebounce( func )
+}

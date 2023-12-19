@@ -1,0 +1,60 @@
+.FileDialog {
+    width: 400px;
+    display: flex;
+    gap: 20px;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background-color: var(--color-gray-1);
+    /* border-radius: 10px; */
+    box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.2);
+    padding: 20px;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+/* An name input and save/load button on one line */
+.FileDialogInput {
+    display: flex;
+    gap: 4px;
+    flex-direction: row;
+    justify-content: center;
+    align-items: stretch;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.FileDialogInput > input {
+    flex: 1 1 auto;
+    padding: 10px;
+    box-sizing: border-box;
+}
+
+.FileDialogList {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-height: 300px;
+    height: 200px;
+    overflow-y: scroll;
+    overflow-x: hidden;
+    box-sizing: border-box;
+    background-color: var(--color-gray-0);
+}
+
+/* Style FileDialogList items */
+.FileDialogList > * {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    box-sizing: border-box;
+    cursor: pointer;
+}
+
+/* Alternate colors in FileDialogList */
+.FileDialogList > *:nth-child(odd) {
+    background-color: var(--color-gray-3);
+}
+.FileDialogList > *:nth-child(even) {
+    background-color: var(--color-gray-2);
+}
