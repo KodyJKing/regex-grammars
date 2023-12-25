@@ -3,14 +3,26 @@ import * as monaco from "monaco-editor"
 
 export type EditorType = monaco.editor.IStandaloneCodeEditor
 
+export function useMonacoEditorState() {
+    const [ editor, setEditor ] = useState<EditorType | null>( null )
+    const [ value, _setValue ] = useState( "" )
+
+    function setValue( value: string ) {
+        _setValue( value )
+        editor?.setValue( value )
+    }
+
+    return { editor, setEditor, value, setValue }
+}
+type MonacoEditorState = ReturnType<typeof useMonacoEditorState>
+
 export function MonacoEditor( properties: {
     style?: React.CSSProperties,
     className?: string,
     options: monaco.editor.IStandaloneEditorConstructionOptions,
-    onEditor?: ( editor: EditorType ) => void,
-    onChanged?: ( value: string, editor: EditorType ) => void
+    editorState?: MonacoEditorState,
 } ) {
-    const { options, onEditor, onChanged, ...rest } = properties
+    const { options, editorState, ...rest } = properties
 
     const [ editor, setEditor ] = useState<EditorType | null>( null )
     const monacoEl = useRef( null )
@@ -21,12 +33,11 @@ export function MonacoEditor( properties: {
                 if ( editor )
                     return editor
                 const _editor = monaco.editor.create( monacoEl.current!, options )
-                if ( onChanged ) {
-                    _editor.onDidChangeModelContent( () => onChanged( _editor.getValue(), _editor ) )
-                    onChanged( _editor.getValue(), _editor )
+                if ( editorState ) {
+                    _editor.onDidChangeModelContent( () => editorState.setValue( _editor.getValue() ) )
+                    editorState.setValue( _editor.getValue() )
+                    editorState.setEditor( _editor )
                 }
-                if ( onEditor )
-                    onEditor( _editor )
                 return _editor
             } )
         }

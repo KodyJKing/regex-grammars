@@ -1,6 +1,8 @@
 import { ConversionOptions } from './grammarToRegex.js'
 import { LocalStore } from './store/LocalStore.js'
 import { undent } from '../src/utils/stringUtils.js'
+import { useStore } from './hooks/useStore.js'
+import { useState } from 'react'
 
 export type SaveFile = {
     grammarSource: string
@@ -110,18 +112,3 @@ export const defaultSave: SaveFile = {
 
 fileStore.set( "example", defaultSave )
 
-// export function useSaveFile( fileName: string ) {
-//     const [ saveFile, setSaveFile ] = useStore( fileStore, fileName, defaultSave )
-
-//     // Setters for individual properties
-//     const patchProperty = ( key: string, value ) => setSaveFile( old => ( { ...old, [ key ]: value } as SaveFile ) )
-//     const saveFileProperties = Object.keys( defaultSave )
-//     const setters = Object.fromEntries( saveFileProperties.map(
-//         key => [ key, ( value ) => patchProperty( key, value ) ]
-//     ) ) as { [ K in keyof SaveFile ]: ( value: SaveFile[ K ] ) => void }
-
-//     return {
-//         saveFile, setSaveFile,
-//         ...setters
-//     }
-// }
