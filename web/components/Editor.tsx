@@ -76,8 +76,7 @@ export function Editor() {
         <MenuBar
             openSaveDialog={() => setSaveDialogOpen( true )}
             openLoadDialog={() => setLoadDialogOpen( true )}
-            copySharableLink={copySharableLink}
-            fileName={fileName}
+            editorState={editorState}
         />
 
         <OutputBar {...{ error, regexSource, flags }} />
@@ -151,13 +150,16 @@ function MenuBar( props: {
     openSaveDialog: () => void,
     openLoadDialog: () => void,
     copySharableLink: () => void,
-    fileName: string
+    editorState: ReturnType<typeof useEditorState>
 } ) {
+    const copyDisabled = props.editorState.jsReplacer
+    const copyTooltip = copyDisabled ? "JS replacer functions cannot be shared." : "copy link to clipboard"
+
     return <div className={classes.MenuBar}>
         <button onClick={props.openSaveDialog}>Save</button>
         <button onClick={props.openLoadDialog}>Load</button>
-        <button title="copy link to clipboard" onClick={props.copySharableLink}>Share</button>
-        <div className={classes.MenuBarTitle}>{props.fileName}</div>
+        <button disabled={copyDisabled} title={copyTooltip} onClick={props.editorState.copySharableLink}>Share</button>
+        <div className={classes.MenuBarTitle}>{props.editorState.fileName}</div>
     </div>
 }
 
