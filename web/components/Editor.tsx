@@ -37,7 +37,6 @@ export function Editor() {
         replacementPattern, setReplacementPattern,
         jsReplacer, setJsReplacer,
         getSaveFile, loadSaveFile,
-        copySharableLink
     } = editorState
 
     const [ saveDialogOpen, setSaveDialogOpen ] = useState( false )
