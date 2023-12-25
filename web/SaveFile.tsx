@@ -11,7 +11,7 @@ export type SaveFile = {
     conversionOptions: ConversionOptions
 }
 
-export async function saveToSharableLink( saveFile: SaveFile ) {
+export function saveToSharableLink( saveFile: SaveFile ) {
     const json = JSON.stringify( saveFile )
     const encoded = btoa( json )
     const url = new URL( window.location.href )
@@ -19,7 +19,7 @@ export async function saveToSharableLink( saveFile: SaveFile ) {
     return url.toString()
 }
 
-export async function saveFromSharableLink( url: URL ) {
+export function saveFromSharableLink( url: URL ) {
     const encoded = url.searchParams.get( "g" )
     if ( !encoded ) return null
     const json = atob( encoded )

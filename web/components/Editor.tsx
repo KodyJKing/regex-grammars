@@ -15,6 +15,7 @@ import { LocalStore, defaultLocalStore } from '../store/LocalStore.js'
 
 import classes from "./Editor.module.css"
 import { SaveFile, defaultSave, fileStore, saveFromSharableLink, saveToSharableLink } from '../SaveFile.js'
+import { useLocal } from '../hooks/useLocal.js'
 
 type DecorationsState = { decorations: string[] }
 
@@ -29,12 +30,14 @@ const editorStyle: React.CSSProperties = {
     flex: "1 1 200px", minWidth: "400px", minHeight: "200px"
 }
 
-const urlSave = await saveFromSharableLink( new URL( window.location.href ) )
-
 export function Editor() {
-    const saveFile = urlSave ?? defaultSave
 
-    const [ fileName, setFileName ] = useState( "untitled" )
+    // Todo: Refactor this cludgy state management.
+
+    const urlSave = useMemo( () => saveFromSharableLink( new URL( window.location.href ) ), [] )
+    const [ fileName, setFileName ] = useLocal<string>( "fileName", "untitled", urlSave !== null )
+    const previousSave = useMemo( () => fileStore.get( fileName ), [] )
+    const saveFile = urlSave ?? previousSave ?? defaultSave
 
     const [ grammarSource, setGrammarSource_raw ] = useState<string>( saveFile.grammarSource )
     const [ grammarTextEditor, setGrammarEditor ] = useState<EditorType>()
