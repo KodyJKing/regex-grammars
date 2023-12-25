@@ -14,6 +14,7 @@ import { LoadDialog, SaveDialog } from './FileDialog.js'
 import { LocalStore, defaultLocalStore } from '../store/LocalStore.js'
 
 import classes from "./Editor.module.css"
+import { SaveFile, defaultSave, fileStore, saveFromSharableLink, saveToSharableLink } from '../SaveFile.js'
 
 type DecorationsState = { decorations: string[] }
 
@@ -28,44 +29,36 @@ const editorStyle: React.CSSProperties = {
     flex: "1 1 200px", minWidth: "400px", minHeight: "200px"
 }
 
-// === File save/load ===
-export type SaveFile = {
-    grammarSource: string,
-    sampleText: string,
-    replacementPattern: string,
-    flags: string,
-    jsReplacer: boolean,
-    conversionOptions: ConversionOptions
-}
-const fileStore = new LocalStore<SaveFile>( "regex-grammar" )
-// ======================
+const urlSave = await saveFromSharableLink( new URL( window.location.href ) )
 
-export function Editor( props: { grammarSource, sampleText, replacementPattern } ) {
+export function Editor() {
+    const saveFile = urlSave ?? defaultSave
+
     const [ fileName, setFileName ] = useState( "untitled" )
 
-    const [ grammarSource, _setGrammarSource ] = useState<string>( "" )
+    const [ grammarSource, setGrammarSource_raw ] = useState<string>( saveFile.grammarSource )
     const [ grammarTextEditor, setGrammarEditor ] = useState<EditorType>()
-    const [ conversionOptions, setConversionOptions ] = useState( { noNonCaptureGroups: false } )
+    const [ conversionOptions, setConversionOptions ] = useState( saveFile.conversionOptions )
     function setGrammarSource( source: string ) {
-        _setGrammarSource( source )
+        setGrammarSource_raw( source )
         grammarTextEditor?.setValue( source )
     }
 
-    const [ flags, setFlags ] = useState( "gm" )
+    const [ flags, setFlags ] = useState( saveFile.flags )
 
     const [ error, setError ] = useState<any>()
     const [ regexSource, setRegexSource ] = useState<string>()
 
     const [ sampleTextEditor, setTextEditor ] = useState<EditorType>()
-    const [ sampleText, _setSampleText ] = useState( "" )
+    const [ sampleText, setSampleText_raw ] = useState( saveFile.sampleText )
     function setSampleText( source: string ) {
-        _setSampleText( source )
+        setSampleText_raw( source )
         sampleTextEditor?.setValue( source )
     }
 
     const [ replacementTextEditor, setReplacementTextEditor ] = useState<EditorType>()
-    const [ replacementPattern, setReplacementPattern ] = useState( props.replacementPattern )
-    const [ jsReplacer, setJsReplacer ] = useState( true )
+    const [ replacementPattern, setReplacementPattern ] = useState( saveFile.replacementPattern )
+    const [ jsReplacer, setJsReplacer ] = useState( saveFile.jsReplacer )
 
     const [ saveDialogOpen, setSaveDialogOpen ] = useState( false )
     const [ loadDialogOpen, setLoadDialogOpen ] = useState( false )
@@ -86,12 +79,16 @@ export function Editor( props: { grammarSource, sampleText, replacementPattern }
         setReplacementPattern( file.replacementPattern ?? "" )
         setConversionOptions( file.conversionOptions ?? { noNonCaptureGroups: false } )
     }
+    async function copySharableLink() {
+        const url = await saveToSharableLink( getSaveFile() )
+        navigator.clipboard.writeText( url )
+    }
 
     // Compile grammar
     useEffect( () => {
         if ( grammarTextEditor )
             compileDebounced( grammarTextEditor, setError, setRegexSource, conversionOptions )
-    }, [ grammarSource, conversionOptions ] )
+    }, [ grammarSource, conversionOptions, grammarTextEditor ] )
 
     // Update text search
     useEffect( () => {
@@ -124,7 +121,7 @@ export function Editor( props: { grammarSource, sampleText, replacementPattern }
                 replacementTextEditor.setValue( e.toString() )
             }
         }
-    }, [ regexSource, sampleText, replacementPattern, jsReplacer, flags ] )
+    }, [ regexSource, sampleText, replacementPattern, jsReplacer, flags, replacementTextEditor ] )
 
     return <div ref={ref} className="fill flex-column"
         onKeyDown={e => {
@@ -156,6 +153,7 @@ export function Editor( props: { grammarSource, sampleText, replacementPattern }
         <MenuBar
             openSaveDialog={() => setSaveDialogOpen( true )}
             openLoadDialog={() => setLoadDialogOpen( true )}
+            copySharableLink={copySharableLink}
             fileName={fileName}
         />
 
@@ -176,8 +174,8 @@ export function Editor( props: { grammarSource, sampleText, replacementPattern }
                 <MonacoEditor
                     style={editorStyle}
                     onEditor={setGrammarEditor}
-                    onChanged={_setGrammarSource}
-                    options={{ value: props.grammarSource, language: PegexLanguageName, ...editorSettings }}
+                    onChanged={setGrammarSource_raw}
+                    options={{ value: saveFile.grammarSource, language: PegexLanguageName, ...editorSettings }}
                 />
 
             </div>
@@ -193,10 +191,10 @@ export function Editor( props: { grammarSource, sampleText, replacementPattern }
                 {/* Test input editor */}
                 <MonacoEditor
                     style={editorStyle}
-                    onChanged={_setSampleText}
+                    onChanged={setSampleText_raw}
                     onEditor={setTextEditor}
                     options={{
-                        value: props.sampleText, renderWhitespace: "all",
+                        value: saveFile.sampleText, renderWhitespace: "all",
                         language: "plaintext", ...editorSettings
                     }}
                 />
@@ -231,12 +229,13 @@ export function Editor( props: { grammarSource, sampleText, replacementPattern }
 function MenuBar( props: {
     openSaveDialog: () => void,
     openLoadDialog: () => void,
+    copySharableLink: () => void,
     fileName: string
 } ) {
-    return <div className={classes.MenuBar} style={{
-    }}>
+    return <div className={classes.MenuBar}>
         <button onClick={props.openSaveDialog}>Save</button>
         <button onClick={props.openLoadDialog}>Load</button>
+        <button title="copy link to clipboard" onClick={props.copySharableLink}>Share</button>
         <div className={classes.MenuBarTitle}>{props.fileName}</div>
     </div>
 }

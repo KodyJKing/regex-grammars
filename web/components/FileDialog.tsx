@@ -13,7 +13,8 @@ function useDialogState<V>(
 ) {
     const [ inputName, _setInputName ] = useState( initialName )
     const [ inputNamePreTab, setInputNamePreTab ] = useState<string>( initialName )
-    const fileNames = useStoreKeys( store )
+    const fileNames = useStoreKeys( store )//.filter( name => name.startsWith( inputNamePreTab ) )
+
     function setInputName( name: string ) {
         setInputNamePreTab( name )
         _setInputName( name )
