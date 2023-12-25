@@ -149,7 +149,6 @@ export function Editor() {
 function MenuBar( props: {
     openSaveDialog: () => void,
     openLoadDialog: () => void,
-    copySharableLink: () => void,
     editorState: ReturnType<typeof useEditorState>
 } ) {
     const copyDisabled = props.editorState.jsReplacer
