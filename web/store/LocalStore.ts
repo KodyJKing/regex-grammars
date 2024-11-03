@@ -41,6 +41,12 @@ export class LocalStore<V> implements Store<string, V> {
     storageKey( key: string ): string { return this.prefix + "." + key }
     extractKey( storageKey: string ): string { return storageKey.substring( this.prefix.length + 1 ) }
 
+    writable( key: string ): boolean { return true }
+
+    has( key: string ): boolean {
+        return localStorage.getItem( this.storageKey( key ) ) !== null
+    }
+
     get( key: string ): V | undefined {
         console.log( "LocalStore.get", key )
         return this.deserialize( localStorage.getItem( this.storageKey( key ) ) )

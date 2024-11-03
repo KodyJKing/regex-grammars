@@ -1,4 +1,4 @@
-import { Store } from "./Store.js";
+import { Store } from "./Store.js"
 
 // A write-through cache wrapper for another Store.
 export class CachedStore<K, V> implements Store<K, V> {
@@ -22,6 +22,14 @@ export class CachedStore<K, V> implements Store<K, V> {
                     this.cache.set( key, value )
             }
         } )
+    }
+
+    writable( key: K ): boolean {
+        return this.externalStore.writable( key )
+    }
+
+    has( key: K ): boolean {
+        return this.cache.has( key ) || this.externalStore.has( key )
     }
 
     get( key: K ): V | undefined {
